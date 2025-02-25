@@ -21,3 +21,4 @@ This file defines one dimensional formal group law over a ring `A`, homomorphism
 -/
 
 -- Definition of Formal Group
+def hello := "world"
