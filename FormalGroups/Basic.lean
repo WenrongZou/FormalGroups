@@ -43,22 +43,31 @@ def coeff_Y : Fin 2 → ℕ
 #check Finsupp.equivFunOnFinite.invFun coeff_X
 #check subst
 
-noncomputable def X : MvPowerSeries (Fin 2) R := MvPowerSeries.X (0 : Fin 2)
+-- noncomputable def X : MvPowerSeries (Fin 2) R := MvPowerSeries.X (0 : Fin 2)
 
-noncomputable def Y : MvPowerSeries (Fin 2) R := MvPowerSeries.X (1 : Fin 2)
+-- noncomputable def Y : MvPowerSeries (Fin 2) R := MvPowerSeries.X (1 : Fin 2)
 
 
--- X ↦ F(), Y ↦ Y
-noncomputable def sub_fir {A : Type*} [CommRing A] (F : MvPowerSeries (Fin 2) A): Fin 2 → MvPowerSeries (Fin 2) A
-  | ⟨0, _⟩ => F
-  | ⟨1, _⟩ => MvPowerSeries.X (1 : Fin 2)
+noncomputable def sub_fir_aux {A : Type*} [CommRing A]: Fin 2 → MvPowerSeries (Fin 3) A
+  | ⟨0, _⟩ => MvPowerSeries.X (0 : Fin 3)
+  | ⟨1, _⟩ => MvPowerSeries.X (1 : Fin 3)
 
--- X ↦ X, Y ↦ F ()
-noncomputable def sub_sec {A : Type*} [CommRing A] (F : MvPowerSeries (Fin 2) A): Fin 2 → MvPowerSeries (Fin 2) A
-  | ⟨0, _⟩ => MvPowerSeries.X (0 : Fin 2)
-  | ⟨1, _⟩ => F
+noncomputable def sub_sec_aux {A : Type*} [CommRing A]: Fin 2 → MvPowerSeries (Fin 3) A
+  | ⟨0, _⟩ => MvPowerSeries.X (0 : Fin 3)
+  | ⟨1, _⟩ => MvPowerSeries.X (1 : Fin 3)
 
--- X ↦ Y, Y ↦ X
+
+-- (0 : Fin 2) ↦ F(X, Y), (1 : Fin 2) ↦ Z
+noncomputable def sub_fir {A : Type*} [CommRing A] (F : MvPowerSeries (Fin 2) A): Fin 2 → MvPowerSeries (Fin 3) A
+  | ⟨0, _⟩ => @MvPowerSeries.subst _ A _ _ A _  _ (sub_fir_aux) F
+  | ⟨1, _⟩ => MvPowerSeries.X (2 : Fin 3)
+
+-- (0 : Fin 2) ↦ X, (1 : Fin 2) ↦ F (Y, Z)
+noncomputable def sub_sec {A : Type*} [CommRing A] (F : MvPowerSeries (Fin 2) A): Fin 2 → MvPowerSeries (Fin 3) A
+  | ⟨0, _⟩ => MvPowerSeries.X (0 : Fin 3)
+  | ⟨1, _⟩ => @MvPowerSeries.subst _ A _ _ A _  _ (sub_sec_aux) F
+
+-- (0 : Fin 2) ↦ Y, (1 : Fin 2) ↦ X
 noncomputable def sub_symm {A : Type*} [CommRing A] : Fin 2 → MvPowerSeries (Fin 2) A
   | ⟨0, _⟩ => MvPowerSeries.X (1 : Fin 2)
   | ⟨1, _⟩ => MvPowerSeries.X (0 : Fin 2)
@@ -67,9 +76,6 @@ noncomputable def sub_symm {A : Type*} [CommRing A] : Fin 2 → MvPowerSeries (F
 
 #check subst (sub_fir G) G
 #check subst (sub_sec G) G
-
-
-#check X
 
 
 structure MvPowerSeries_coeff (A : Type*) [CommRing A] where
@@ -100,8 +106,8 @@ noncomputable def sub_hom₁ {A : Type*} [CommRing A]  (F : MvPowerSeries (Fin 2
 
 -- G (a (X), a (Y))
 noncomputable def sub_hom₂ {A : Type*} [CommRing A] (a : PowerSeries_coeff A): Fin 2 → MvPowerSeries (Fin 2) A
-  | ⟨0, _⟩ => subst (sub_hom₁ X) a.F
-  | ⟨1, _⟩ => subst (sub_hom₁ Y) a.F
+  | ⟨0, _⟩ => @MvPowerSeries.subst _ A _ _ A _  _ (sub_hom₁ (MvPowerSeries.X (0 : Fin 2))) a.F
+  | ⟨1, _⟩ => @MvPowerSeries.subst _ A _ _ A _  _ (sub_hom₁ (MvPowerSeries.X (1 : Fin 2))) a.F
 
 structure FormalGroupHom {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A} (a : PowerSeries_coeff A) where
   hom : MvPowerSeries.subst (sub_hom₁ G₁.F) a.F = @MvPowerSeries.subst _ A _ _ A _  _ (sub_hom₂ a) G₂.F
