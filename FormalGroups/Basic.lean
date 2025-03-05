@@ -53,17 +53,17 @@ noncomputable def sub_fir {A : Type*} [CommRing A] (F : MvPowerSeries (Fin 2) A)
   | ⟨0, _⟩ => F
   | ⟨1, _⟩ => MvPowerSeries.X (1 : Fin 2)
 
+-- X ↦ X, Y ↦ F ()
 noncomputable def sub_sec {A : Type*} [CommRing A] (F : MvPowerSeries (Fin 2) A): Fin 2 → MvPowerSeries (Fin 2) A
   | ⟨0, _⟩ => MvPowerSeries.X (0 : Fin 2)
   | ⟨1, _⟩ => F
 
+-- X ↦ Y, Y ↦ X
 noncomputable def sub_symm {A : Type*} [CommRing A] : Fin 2 → MvPowerSeries (Fin 2) A
   | ⟨0, _⟩ => MvPowerSeries.X (1 : Fin 2)
   | ⟨1, _⟩ => MvPowerSeries.X (0 : Fin 2)
 
-noncomputable def sub_id {A : Type*} [CommRing A] : Fin 2 → MvPowerSeries (Fin 2) A
-  | ⟨0, _⟩ => MvPowerSeries.X (0 : Fin 2)
-  | ⟨1, _⟩ => MvPowerSeries.X (1 : Fin 2)
+
 
 #check subst (sub_fir G) G
 #check subst (sub_sec G) G
@@ -85,7 +85,7 @@ structure FormalGroup (A : Type*) [CommRing A] extends MvPowerSeries_coeff A whe
   --  Associativity of the Formal Group : `F (F (X, Y), Z) = F (X, F (Y, Z))`.
 
 structure CommFormalGroup (A : Type*) [CommRing A] extends FormalGroup A where
-  comm : @MvPowerSeries.subst _ A _ _ A _  _ sub_id F = @MvPowerSeries.subst _ A _ _ A _  _ (sub_symm) F
+  comm : F = @MvPowerSeries.subst _ A _ _ A _  _ (sub_symm) F
 -- Commutativity F (X, Y) = F (Y, X)
 
 
@@ -111,10 +111,40 @@ structure FormalGroupHom {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A} (a
 #check MvPowerSeries_coeff.F
 #check FormalGroup
 
-
-
+#check FormalGroup R
 
 
 namespace FormalGroup
+
+def AddFormaGroup {A : Type*} [CommRing A] : FormalGroup A where
+  F := MvPowerSeries.X (0 : Fin 2) + MvPowerSeries.X (1 : Fin 2)
+  zero_coeff := by simp
+  lin_coeff_X := by sorry
+  lin_coeff_Y := by sorry
+  assoc := by
+    classical
+    simp
+    unfold MvPowerSeries.subst
+    simp [MvPowerSeries.eval₂]
+    unfold sub_fir sub_sec
+    sorry
+
+def MulFormalGroup {A : Type*} [CommRing A] : FormalGroup A where
+  F := MvPowerSeries.X (0 : Fin 2) + MvPowerSeries.X (1 : Fin 2) + MvPowerSeries.X (0 : Fin 2) * MvPowerSeries.X (1 : Fin 2)
+  zero_coeff := by simp
+  lin_coeff_X := by sorry
+  lin_coeff_Y := by sorry
+  assoc := by sorry
+
+
+-- X ↦ X, Y ↦ ι (X)
+noncomputable def sub_sec' {A : Type*} [CommRing A] (a : PowerSeries_coeff A) : Fin 2 → MvPowerSeries (Fin 1) A
+  | ⟨0, _⟩ => MvPowerSeries.X (0 : Fin 1)
+  | ⟨1, _⟩ => a.F
+  -- cast a one variable power series to multivariable power series
+
+
+theorem inv_exist {A : Type*} [CommRing A] {F : FormalGroup A} : ∃ (ι : PowerSeries_coeff A), @MvPowerSeries.coeff (Fin 1) A _ (Finsupp.equivFunOnFinite.invFun (1 : Fin 1 → ℕ)) ι.F = - 1 ∧ @MvPowerSeries.subst _ A _ _ A _  _ (sub_sec' ι) F.F  = 0 := sorry
+
 
 end FormalGroup
