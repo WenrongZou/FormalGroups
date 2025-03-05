@@ -116,25 +116,25 @@ structure FormalGroupHom {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A} (a
 
 namespace FormalGroup
 
-def AddFormaGroup {A : Type*} [CommRing A] : FormalGroup A where
-  F := MvPowerSeries.X (0 : Fin 2) + MvPowerSeries.X (1 : Fin 2)
-  zero_coeff := by simp
-  lin_coeff_X := by sorry
-  lin_coeff_Y := by sorry
-  assoc := by
-    classical
-    simp
-    unfold MvPowerSeries.subst
-    simp [MvPowerSeries.eval₂]
-    unfold sub_fir sub_sec
-    sorry
+-- def AddFormaGroup {A : Type*} [CommRing A] : FormalGroup A where
+--   F := MvPowerSeries.X (0 : Fin 2) + MvPowerSeries.X (1 : Fin 2)
+--   zero_coeff := by simp
+--   lin_coeff_X := by sorry
+--   lin_coeff_Y := by sorry
+--   assoc := by
+--     classical
+--     simp
+--     unfold MvPowerSeries.subst
+--     simp [MvPowerSeries.eval₂]
+--     unfold sub_fir sub_sec
+--     sorry
 
-def MulFormalGroup {A : Type*} [CommRing A] : FormalGroup A where
-  F := MvPowerSeries.X (0 : Fin 2) + MvPowerSeries.X (1 : Fin 2) + MvPowerSeries.X (0 : Fin 2) * MvPowerSeries.X (1 : Fin 2)
-  zero_coeff := by simp
-  lin_coeff_X := by sorry
-  lin_coeff_Y := by sorry
-  assoc := by sorry
+-- def MulFormalGroup {A : Type*} [CommRing A] : FormalGroup A where
+--   F := MvPowerSeries.X (0 : Fin 2) + MvPowerSeries.X (1 : Fin 2) + MvPowerSeries.X (0 : Fin 2) * MvPowerSeries.X (1 : Fin 2)
+--   zero_coeff := by simp
+--   lin_coeff_X := by sorry
+--   lin_coeff_Y := by sorry
+--   assoc := by sorry
 
 
 -- X ↦ X, Y ↦ ι (X)
