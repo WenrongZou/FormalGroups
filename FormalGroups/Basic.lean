@@ -53,8 +53,8 @@ noncomputable def sub_fir_aux {A : Type*} [CommRing A]: Fin 2 → MvPowerSeries 
   | ⟨1, _⟩ => MvPowerSeries.X (1 : Fin 3)
 
 noncomputable def sub_sec_aux {A : Type*} [CommRing A]: Fin 2 → MvPowerSeries (Fin 3) A
-  | ⟨0, _⟩ => MvPowerSeries.X (0 : Fin 3)
-  | ⟨1, _⟩ => MvPowerSeries.X (1 : Fin 3)
+  | ⟨0, _⟩ => MvPowerSeries.X (1 : Fin 3)
+  | ⟨1, _⟩ => MvPowerSeries.X (2 : Fin 3)
 
 
 -- (0 : Fin 2) ↦ F(X, Y), (1 : Fin 2) ↦ Z
