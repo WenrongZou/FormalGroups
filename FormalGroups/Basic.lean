@@ -227,7 +227,7 @@ open TensorProduct MvPolynomial
 /-! This section discuss a general method for constructing formal group law over
 characteristic zero rings. -/
 
-variable {A : Type*} [CommRing A] [CharZero A] [CommSemiring A]
+variable {A : Type*} [CommRing A] [CommSemiring A]
 
 -- `A ⊗[ℤ] ℚ` is equivalent to `TensorProduct ℤ A ℚ`.
 
@@ -252,6 +252,12 @@ theorem exist_subst_inv {u : Aˣ} {f : PowerSeriesZeroConst A}
   ∧ @MvPowerSeries.subst _ A _ _ A _  _ (fun _ => g.toFun) f.toFun = MvPowerSeries.X (0 : Fin 1)
   := sorry
 
+theorem exist_subst_inv' {u : Aˣ} {f : MvPowerSeries (Fin 1) A}
+  (hf : MvPowerSeries.coeff A (Finsupp.equivFunOnFinite.invFun 1) f = u) :
+  ∃ (g : MvPowerSeries (Fin 1) A), @MvPowerSeries.subst _ A _ _ A _  _ (fun _ => f) g = MvPowerSeries.X (0 : Fin 1)
+  ∧ @MvPowerSeries.subst _ A _ _ A _  _ (fun _ => g) f = MvPowerSeries.X (0 : Fin 1)
+  := sorry
+
 -- todo: general case of the above theorem for `n` dimensional case.
 
 /-- The following definition is used to get the substitution inverse of
@@ -263,6 +269,11 @@ noncomputable def subst_inv {u : Aˣ} (f : PowerSeriesZeroConst A)
     choose g hg using exist_subst_inv hf
     exact g
 
+noncomputable def subst_inv' {u : Aˣ} (f : MvPowerSeries (Fin 1) A)
+  (hf : MvPowerSeries.coeff A (Finsupp.equivFunOnFinite.invFun 1) f = u) :
+  MvPowerSeries (Fin 1) A:= by
+    choose g hg using exist_subst_inv' hf
+    exact g
 
 -- Why the following doesn't work. `ask`
 
@@ -419,7 +430,7 @@ variable {ϖ : A} (h : Irreducible ϖ)
   discusstion in the previous section, `F(X,Y)` is a formal group law, and `[a]_{F}(X)` defines
   a homomorphism of Formal Groups.-/
 
-
+-- need nonarchimedean
 instance : Fintype (IsLocalRing.ResidueField A):= sorry
 
 def card_residue : ℕ := Fintype.card (IsLocalRing.ResidueField A)
@@ -444,7 +455,14 @@ open Pointwise FormalGroup
 variable {K : Type*} [CommRing K] {A : Subring K} [CommRing A] {𝔞 : Ideal A}
 variable {p n q: ℕ} (hp : Nat.Prime p) (hn : n ≥ 1) (hq : q = p ^ n)
 variable {σ : K →+* K}  (hs : ∀ (a : A), σ a ∈ A) {x : A} (hs_mod : ∀ (a : A), (⟨σ a, hs a⟩) ≡ a ^ q  [SMOD 𝔞])
-variable (hp : (p : A) ∈ 𝔞) {s : ℕ → K} (hs_i : ∀ (i : ℕ), ∀ (a : 𝔞), (s i) * a ∈ A) -- how to express this condition using the notation like `(s i) • 𝔞 ⊆ A`
+variable (hp : (p : A) ∈ 𝔞) {s : ℕ → K} (hs_i : ∀ (i : ℕ), ∀ (a : 𝔞), (s i) * a ∈ A)
+-- variable (ha : ∀ (r : ℕ), ∀ (b : K), b • 𝔞 ^ r ⊆ 𝔞 → (σ b) • (𝔞 ^ r) ⊆ 𝔞)
+-- variable (ha : ∀ (r : ℕ), ∀ (b : K),  (∀ (x : (𝔞 ^ r)),  b * x ∈ (𝔞 ^ r)) → (∀ (x : (𝔞 ^ r)), (σ b) * x ∈ 𝔞 ^ r) )
+-- Why the above does not work.
+-- how to express this condition using the notation like `(s i) • 𝔞 ⊆ A`
+-- Does this section need `[CharZero A]`
+-- variable [CharZero ↥A] [Algebra (↥A) K]
+
 
 -- `___________________________________ ASK ABOVE _____________________________________`
 
@@ -495,12 +513,52 @@ noncomputable def RecurFun (g : PowerSeriesZeroConst A) : MvPowerSeries (Fin 1) 
   everything the same except possibly `g(X) ≠ g_bar(X)`, then we shall say that
   `f_g(X)` and `f_{g_bar}(X)` satisfy the same type of functional equation.-/
 
--- variable (f  PowerSeriesZeroConst A)
--- #check RecurFun f
+/-- If `f_g(X)` and `f_{g_bar}(X)` are power series obtained by the recursion equation with
+  everything the same except possibly `g(X) ≠ g_bar(X)`, then we shall say that
+  `f_g(X)` and `f_{g_bar}(X)` satisfy the same type of functional equation. -/
+def IsSameType (g : PowerSeriesZeroConst A) (g_bar : PowerSeriesZeroConst A) : Prop :=
+  g.toFun ≠ g_bar.toFun ∧ (@RecurFun K _ A _ n q σ s g = @RecurFun K _ A _ n q σ s g_bar)
 
--- def IsSameType (g : PowerSeriesZeroConst A) (g_bar : PowerSeriesZeroConst A)
---   (hg: g.toFun ≠ g_bar.toFun) : Prop :=
---   RecurFun g = RecurFun g_bar
+def Coeff_cast (g : PowerSeriesZeroConst A) :  MvPowerSeries (Fin 1) K :=
+  MvPowerSeries.map (Fin 1) (Subring.subtype A) g.toFun
+
+noncomputable def F_g (g : PowerSeriesZeroConst A)
+  (hg : MvPowerSeries.coeff K (Finsupp.equivFunOnFinite.invFun 1) (@RecurFun K _ A _ n q σ s g) = (1 : Kˣ))
+  : MvPowerSeries (Fin 2) K :=
+  MvPowerSeries.subst (fun _ => ((MvPowerSeries.subst (fun _ => MvPowerSeries.X (0 : Fin 2)) (@RecurFun K _ A _ n q σ s g)) + (MvPowerSeries.subst (fun _ => MvPowerSeries.X (1 : Fin 2)) (@RecurFun K _ A _ n q σ s g)))) ((FormalGroupsWithCharZero.subst_inv' (@RecurFun K _ A _ n q σ s g) hg))
+
+
+theorem FunEqLem_one (g : PowerSeriesZeroConst A)
+  (hg : MvPowerSeries.coeff K (Finsupp.equivFunOnFinite.invFun 1) (@RecurFun K _ A _ n q σ s g) = (1 : Kˣ)) :
+  ∀ (n : (Fin 2) →₀ ℕ), MvPowerSeries.coeff K n (F_g g hg) ∈ A := sorry
+
+noncomputable def inv_comp_bar (g : PowerSeriesZeroConst A) (g_bar : PowerSeriesZeroConst A)
+  : MvPowerSeries (Fin 1) K :=
+  MvPowerSeries.subst (fun _ => (@RecurFun K _ A _ n q σ s g)) (@RecurFun K _ A _ n q σ s g_bar)
+
+theorem FunEqLem_two (g : PowerSeriesZeroConst A) (g_bar : PowerSeriesZeroConst A) :
+  ∀ (n' : (Fin 1) →₀ ℕ), MvPowerSeries.coeff K n' (@inv_comp_bar K _ A _ n q σ s  g g_bar) ∈ A := sorry
+
+theorem FunEqLem_three (g : PowerSeriesZeroConst A) (h : PowerSeriesZeroConst A)
+  : ∃ (h_hat : PowerSeriesZeroConst A), MvPowerSeries.subst (fun _ => (Coeff_cast h)) (@RecurFun K _ A _ n q σ s g) = (@RecurFun K _ A _ n q σ s h_hat) := sorry
+
+-- Ideal.Quotient.mk
+
+def coeff_mod (g : MvPowerSeries (Fin 1) A) (I : Ideal A)
+  : MvPowerSeries (Fin 1) (A ⧸ (I)):=
+  MvPowerSeries.map (Fin 1) (Ideal.Quotient.mk (I)) g
+
+def coeff_mod' (g : MvPowerSeries (Fin 1) A) (I : Ideal A) {r : ℕ}
+  : MvPowerSeries (Fin 1) (A ⧸ (I ^ r)):=
+  MvPowerSeries.map (Fin 1) (Ideal.Quotient.mk (I ^ r)) g
+-- def coeff_mod' (g : MvPowerSeries (Fin 1) K) (I : Ideal A)
+--   : MvPowerSeries (Fin 1) (K ⧸ (I)):=
+--   MvPowerSeries.map (Fin 1) (Ideal.Quotient.mk (I)) g
+
+-- theorem FunEqLem_four {α : MvPowerSeries (Fin 1) A} {β : MvPowerSeries (Fin 1) K} {r : ℕ}
+--   {hr : r ≥ 1}
+--   : coeff_mod α (𝔞 ^ r) = coeff_mod β (𝔞 ^ r) := sorry
+
 
 -- (hs_mod : ∀ (a : A), σ a - a ^ q ∈ 𝔞)
 -- variable (hp_in : (p : ℤ) ∈ 𝔞)
