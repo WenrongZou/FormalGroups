@@ -55,7 +55,7 @@ def coeff_Y : Fin 2 → ℕ
 -- noncomputable def X : MvPowerSeries (Fin 2) R := MvPowerSeries.X (0 : Fin 2)
 
 -- noncomputable def Y : MvPowerSeries (Fin 2) R := MvPowerSeries.X (1 : Fin 2)
-
+-- make them as abbrev
 
 noncomputable def sub_fir_aux {A : Type*} [CommRing A]: Fin 2 → MvPowerSeries (Fin 3) A
   | ⟨0, _⟩ => MvPowerSeries.X (0 : Fin 3)
@@ -64,6 +64,8 @@ noncomputable def sub_fir_aux {A : Type*} [CommRing A]: Fin 2 → MvPowerSeries 
 noncomputable def sub_sec_aux {A : Type*} [CommRing A]: Fin 2 → MvPowerSeries (Fin 3) A
   | ⟨0, _⟩ => MvPowerSeries.X (1 : Fin 3)
   | ⟨1, _⟩ => MvPowerSeries.X (2 : Fin 3)
+
+-- instance : MvPowerSeries.SubstDomain sub_fir_aux (S := A):= sorry
 
 
 -- (0 : Fin 2) ↦ F(X, Y), (1 : Fin 2) ↦ Z
@@ -87,19 +89,12 @@ noncomputable def sub_symm {A : Type*} [CommRing A] : Fin 2 → MvPowerSeries (F
 #check subst (sub_sec G) G
 
 
--- structure MvPowerSeries_coeff (A : Type*) [CommRing A] where
---   toFun : MvPowerSeries (Fin 2) A
---   zero_coeff : MvPowerSeries.coeff A 0 toFun = 0
---   lin_coeff_X : MvPowerSeries.coeff A (Finsupp.equivFunOnFinite.invFun coeff_X) toFun = 1
---   lin_coeff_Y : MvPowerSeries.coeff A (Finsupp.equivFunOnFinite.invFun coeff_Y) toFun = 1
-
-
 /-- A structure for a 1-dimensional formal group law over `R`-/
 structure FormalGroup (A : Type*) [CommRing A]  where
   toFun : MvPowerSeries (Fin 2) A
   zero_coeff : MvPowerSeries.coeff A 0 toFun = 0
-  lin_coeff_X : MvPowerSeries.coeff A (Finsupp.equivFunOnFinite.invFun coeff_X) toFun = 1
-  lin_coeff_Y : MvPowerSeries.coeff A (Finsupp.equivFunOnFinite.invFun coeff_Y) toFun = 1
+  lin_coeff_X : MvPowerSeries.coeff A (Finsupp.single 0 1) toFun = 1
+  lin_coeff_Y : MvPowerSeries.coeff A (Finsupp.single 1 1) toFun = 1
   assoc : @MvPowerSeries.subst _ A _ _ A _  _ (sub_fir toFun) toFun = @MvPowerSeries.subst _ A _ _ A _  _ (sub_sec toFun) toFun
   --  Associativity of the Formal Group : `F (F (X, Y), Z) = F (X, F (Y, Z))`.
 
@@ -114,6 +109,7 @@ structure CommFormalGroup (A : Type*) [CommRing A] extends FormalGroup A where
 structure PowerSeriesZeroConst (A : Type*) [CommRing A] where
   toFun : MvPowerSeries (Fin 1) A
   zero_coeff : MvPowerSeries.coeff A 0 toFun = 0
+-- change all MvPowerSeries (Fin 1) A = PowerSeries
 
 -- a (F (X, Y))
 noncomputable def sub_hom₁ {A : Type*} [CommRing A]  (F : MvPowerSeries (Fin 2) A): Fin 1 → MvPowerSeries (Fin 2) A
@@ -141,6 +137,7 @@ namespace FormalGroups
 def IsIso {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A} (α : FormalGroupHom G₁ G₂) : Prop :=
   ∃ (β : FormalGroupHom G₂ G₁), @MvPowerSeries.subst _ A _ _ A _  _ (fun _ => β.toFun) α.toFun = MvPowerSeries.X (0 : Fin 1)
   ∧ @MvPowerSeries.subst _ A _ _ A _  _ (fun _ => α.toFun) β.toFun = MvPowerSeries.X (0 : Fin 1)
+-- define it to be Equiv.
 
 /-- An isomorphism `α(X) : F (X, Y) → G (X, Y)`, `α(X) = b₁ * X + b₂ * X ^ 2 + ⋯` is called strict isomorphism if `b₁ = 1`.-/
 def IsStrictIso {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A} {α : FormalGroupHom G₁ G₂} : Prop := IsIso α
@@ -160,43 +157,181 @@ theorem isIso_iff_UnitCoeff {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A}
 
 namespace FormalGroups
 
--- noncomputable instance {A : Type*} [CommRing A] : FormalGroup A where
---   F := MvPowerSeries.X (0 : Fin 2) + MvPowerSeries.X (1 : Fin 2)
---   zero_coeff := by simp
---   lin_coeff_X := by sorry
---   lin_coeff_Y := by sorry
---   assoc := by
---     classical
---     simp
---     unfold MvPowerSeries.subst
---     simp [MvPowerSeries.eval₂]
---     split_ifs  with h
---     · unfold sub_fir sub_sec sub_fir_aux
+noncomputable instance {A : Type*} [CommRing A] [UniformSpace A] : CommFormalGroup A where
+  toFun := MvPolynomial.toMvPowerSeries (MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2))
+  zero_coeff := by
+    simp only [Fin.isValue, MvPolynomial.coe_add, MvPolynomial.coe_X,
+    MvPowerSeries.coeff_zero_eq_constantCoeff, map_add, MvPowerSeries.constantCoeff_X, add_zero]
+  lin_coeff_X := by
+    rw [MvPolynomial.coeff_coe, MvPolynomial.coeff_add]
+    calc
+      _ = (1 : A) + (0 : A) := by
+        simp only [Fin.isValue, MvPolynomial.coeff_single_X, and_self, ↓reduceIte, one_ne_zero,
+          and_false, add_zero]
+      _ = 1 := by norm_num
+  lin_coeff_Y := by
+    rw [MvPolynomial.coeff_coe, MvPolynomial.coeff_add]
+    calc
+      _ = (0 : A) + (1 : A) := by
+        simp only [Fin.isValue, MvPolynomial.coeff_single_X, zero_ne_one, and_false, ↓reduceIte,
+          and_self, zero_add]
+      _ = 1 := by norm_num
+  assoc := by
+    unfold MvPowerSeries.subst
+    let f : MvPolynomial (Fin 2) A := (MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2))
+    have hf := Classical.epsilon_spec
+      (p := fun (p : MvPolynomial (Fin 2) A) ↦ p = (f : MvPowerSeries (Fin 2) A)) ⟨f, rfl⟩
+    unfold eval₂
+    rw [if_pos hf]
+    rw [if_pos hf]
+    unfold sub_fir
+    unfold sub_sec
+    have epsilon_aux : (epsilon fun (p : MvPolynomial (Fin 2) A) ↦ ↑p = MvPolynomial.X (0 : Fin 2) (R := A) + MvPolynomial.X (1 : Fin 2) (R := A)) =
+      MvPolynomial.X (0 : Fin 2) (R := A) + MvPolynomial.X (1 : Fin 2) (R := A) := by
+      unfold f at hf
+      norm_cast at hf
+    have eq_aux : MvPowerSeries.subst sub_fir_aux ((MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2) (R := A)): MvPolynomial (Fin 2) A ) (R := A)
+      = MvPowerSeries.X (0 : Fin 3) + MvPowerSeries.X (1 : Fin 3) (R := A):= by
+      unfold MvPowerSeries.subst
+      unfold MvPowerSeries.eval₂
+      rw [if_pos]
+      norm_cast
+      rw [epsilon_aux]
+      unfold sub_fir_aux
+      simp only [Fin.isValue, MvPolynomial.eval₂_add, MvPolynomial.eval₂_X]
+      norm_cast
+    have eq_aux' : MvPowerSeries.subst sub_sec_aux ((MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2)): MvPolynomial (Fin 2) A) (R := A)
+      = MvPowerSeries.X (1 : Fin 3) + MvPowerSeries.X (2 : Fin 3) (R := A):= by
+      unfold MvPowerSeries.subst
+      unfold MvPowerSeries.eval₂
+      rw [if_pos]
+      norm_cast
+      rw [epsilon_aux]
+      unfold sub_sec_aux
+      simp only [Fin.isValue, MvPolynomial.eval₂_add, MvPolynomial.eval₂_X]
+      norm_cast
+    rw [eq_aux, eq_aux']
+    norm_cast
+    rw [epsilon_aux]
+    simp only [Fin.isValue, MvPolynomial.eval₂_add, MvPolynomial.eval₂_X, MvPolynomial.eval₂_mul]
+    ring
+  comm := by
+    simp only [Fin.isValue, MvPolynomial.coe_add, MvPolynomial.coe_X]
+    unfold MvPowerSeries.subst
+    unfold MvPowerSeries.eval₂
+    let f : MvPolynomial (Fin 2) A := (MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2))
+    have hf := Classical.epsilon_spec
+      (p := fun (p : MvPolynomial (Fin 2) A) ↦ p = (f : MvPowerSeries (Fin 2) A)) ⟨f, rfl⟩
+    rw [if_pos]
+    conv =>
+      rhs
+      rw [←MvPolynomial.coe_X 0,← MvPolynomial.coe_X 1]
+      norm_cast
+    have epsilon_aux : (epsilon fun (p : MvPolynomial (Fin 2) A) ↦ ↑p = MvPolynomial.X (0 : Fin 2) (R := A) + MvPolynomial.X (1 : Fin 2) (R := A)) =
+      MvPolynomial.X (0 : Fin 2) (R := A) + MvPolynomial.X (1 : Fin 2) (R := A) := by
+      unfold f at hf
+      norm_cast at hf
+    rw [epsilon_aux]
+    unfold sub_symm
+    simp only [Fin.isValue, MvPolynomial.eval₂_add, MvPolynomial.eval₂_X]
+    ring
+    rw [←MvPolynomial.coe_X 0,← MvPolynomial.coe_X 1]
+    norm_cast
+    unfold f at hf
+    norm_cast at hf
 
+noncomputable instance MulFormalGroup {A : Type*} [CommRing A] : CommFormalGroup A where
+  toFun := MvPolynomial.toMvPowerSeries (MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2) + MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (1 : Fin 2))
+  zero_coeff := by simp only [Fin.isValue, MvPolynomial.coe_add, MvPolynomial.coe_X,
+    MvPolynomial.coe_mul, MvPowerSeries.coeff_zero_eq_constantCoeff, map_add,
+    MvPowerSeries.constantCoeff_X, add_zero, map_mul, mul_zero]
+  lin_coeff_X := by
+    rw [MvPolynomial.coeff_coe, MvPolynomial.coeff_add, MvPolynomial.coeff_add]
+    calc
+      _ = (1 : A) + (0 : A) + (0 : A) := by
+        rw [MvPolynomial.coeff_mul]
+        simp only [Fin.isValue, MvPolynomial.coeff_single_X, and_self, ↓reduceIte, one_ne_zero,
+          and_false, add_zero, Finsupp.antidiagonal_single, Finset.sum_map,
+          Function.Embedding.coe_prodMap, Function.Embedding.coeFn_mk, Prod.map_fst, and_true,
+          Prod.map_snd, mul_zero, Finset.sum_const_zero]
+      _ = (1 : A) := by norm_num
+  lin_coeff_Y := by
+    rw [MvPolynomial.coeff_coe, MvPolynomial.coeff_add, MvPolynomial.coeff_add]
+    calc
+      _ = (0 : A) + (1 : A) + (0 : A) := by
+          rw [MvPolynomial.coeff_mul]
+          simp only [Fin.isValue, MvPolynomial.coeff_single_X, zero_ne_one, and_false, ↓reduceIte,
+            and_self, zero_add, Finsupp.antidiagonal_single, Finset.sum_map,
+            Function.Embedding.coe_prodMap, Function.Embedding.coeFn_mk, Prod.map_fst, Prod.map_snd,
+            and_true, mul_ite, mul_one, mul_zero, ite_self, Finset.sum_const_zero, add_zero]
+        _ = (1 : A) := by norm_num
+  assoc := by
+    let f : MvPolynomial (Fin 2) A := (MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2) + MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (1 : Fin 2))
+    have hf := Classical.epsilon_spec
+      (p := fun (p : MvPolynomial (Fin 2) A) ↦ p = (f : MvPowerSeries (Fin 2) A)) ⟨f, rfl⟩
+    unfold MvPowerSeries.subst
+    unfold eval₂
+    rw [if_pos hf]
+    rw [if_pos hf]
+    unfold sub_fir
+    unfold sub_sec
+    have epsilon_aux : (epsilon fun (p : MvPolynomial (Fin 2) A) ↦ ↑p = (((MvPolynomial.X (0 : Fin 2) (R := A) + MvPolynomial.X 1 +
+      MvPolynomial.X 0 * MvPolynomial.X 1)) : MvPolynomial (Fin 2) A)) = (MvPolynomial.X (0 : Fin 2) (R := A) + MvPolynomial.X (1 : Fin 2) (R := A) +
+      MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (1 : Fin 2) (R := A))  := by
+      unfold f at hf
+      norm_cast at hf
+    have eq_aux : MvPowerSeries.subst sub_fir_aux ((MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2) + MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (1 : Fin 2) (R := A)) : MvPolynomial (Fin 2) A) (R := A)
+      = MvPowerSeries.X (0 : Fin 3) + MvPowerSeries.X (1 : Fin 3) + MvPowerSeries.X (0 : Fin 3) * MvPowerSeries.X (1 : Fin 3) (R := A) := by
+      unfold MvPowerSeries.subst
+      unfold MvPowerSeries.eval₂
+      rw [if_pos]
+      unfold sub_fir_aux
+      norm_cast
+      rw [epsilon_aux]
+      simp
+      norm_cast
+    have eq_aux' : MvPowerSeries.subst sub_sec_aux ((MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2) + MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (1 : Fin 2) (R := A)) : MvPolynomial (Fin 2) A) (R := A)
+      = MvPowerSeries.X (1 : Fin 3) + MvPowerSeries.X (2 : Fin 3) + MvPowerSeries.X (1 : Fin 3) * MvPowerSeries.X (2 : Fin 3) (R := A) := by
+      unfold MvPowerSeries.subst
+      unfold MvPowerSeries.eval₂
+      rw [if_pos]
+      unfold sub_sec_aux
+      norm_cast
+      rw [epsilon_aux]
+      simp
+      norm_cast
+    rw [eq_aux, eq_aux']
+    norm_cast
+    rw [epsilon_aux]
+    simp only [Fin.isValue, MvPolynomial.eval₂_add, MvPolynomial.eval₂_X, MvPolynomial.eval₂_mul]
+    ring
+  comm := by
+    simp only [Fin.isValue, MvPolynomial.coe_add, MvPolynomial.coe_X, MvPolynomial.coe_mul]
+    unfold MvPowerSeries.subst
+    unfold MvPowerSeries.eval₂
+    let f : MvPolynomial (Fin 2) A := (MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2) + MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (1 : Fin 2))
+    have hf := Classical.epsilon_spec
+      (p := fun (p : MvPolynomial (Fin 2) A) ↦ p = (f : MvPowerSeries (Fin 2) A)) ⟨f, rfl⟩
+    rw [if_pos]
+    conv =>
+      rhs
+      rw [←MvPolynomial.coe_X 0,← MvPolynomial.coe_X 1]
+      norm_cast
+    have epsilon_aux : (epsilon fun (p : MvPolynomial (Fin 2) A) ↦ ↑p = (((MvPolynomial.X (0 : Fin 2) (R := A) + MvPolynomial.X 1 +
+      MvPolynomial.X 0 * MvPolynomial.X 1)) : MvPolynomial (Fin 2) A)) = (MvPolynomial.X (0 : Fin 2) (R := A) + MvPolynomial.X (1 : Fin 2) (R := A) +
+      MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (1 : Fin 2) (R := A))  := by
+      unfold f at hf
+      norm_cast at hf
+    rw [epsilon_aux]
+    unfold sub_symm
+    simp only [Fin.isValue, MvPolynomial.eval₂_add, MvPolynomial.eval₂_X, MvPolynomial.eval₂_mul]
+    ring
+    rw [←MvPolynomial.coe_X 0,← MvPolynomial.coe_X 1]
+    norm_cast
+    unfold f at hf
+    norm_cast at hf
 
-      -- conv_lhs => rw [←h]
-      -- congr
-      -- funext x
-      -- by_cases hx : x = 0
-      -- simp [hx]
-      -- unfold MvPowerSeries.subst
-      -- simp [MvPowerSeries.eval₂]
-      -- split_ifs with h'
-      -- conv_lhs => rw[← h']
-
-    --   sorry
-    -- · sorry
-
-
--- def MulFormalGroup {A : Type*} [CommRing A] : FormalGroup A where
---   F := MvPowerSeries.X (0 : Fin 2) + MvPowerSeries.X (1 : Fin 2) + MvPowerSeries.X (0 : Fin 2) * MvPowerSeries.X (1 : Fin 2)
---   zero_coeff := by simp
---   lin_coeff_X := by sorry
---   lin_coeff_Y := by sorry
---   assoc := by sorry
-
-
--- X ↦ X, Y ↦ ι (X)
+-- X ↦ X, Y ↦ a (X)
 noncomputable def sub_sec' {A : Type*} [CommRing A] (a : PowerSeriesZeroConst A) : Fin 2 → MvPowerSeries (Fin 1) A
   | ⟨0, _⟩ => MvPowerSeries.X (0 : Fin 1)
   | ⟨1, _⟩ => a.toFun
@@ -233,6 +368,9 @@ variable {A : Type*} [CommRing A] [CommSemiring A]
 
 /-- `K = A ⊗[ℤ] ℚ`-/
 def K := TensorProduct ℤ A ℚ
+#check K
+
+instance : CommRing (K (A := A)) := sorry
 
 
 -- `--------------------------------------------------`
@@ -318,15 +456,15 @@ theorem F_add_inv.assoc (f : PowerSeriesZeroConst A)
   : MvPowerSeries.subst  (sub_fir (F_add_inv f hf) ) (F_add_inv f hf)  = MvPowerSeries.subst (sub_sec (F_add_inv f hf) ) (F_add_inv f hf) := sorry
 
 
-/-- `F(X, Y) = f⁻¹(f(X) + f(Y))` is a Formal Group Law. -/
-noncomputable instance F_add_inv_FG (f : PowerSeriesZeroConst A)
-  (hf : MvPowerSeries.coeff A (Finsupp.equivFunOnFinite.invFun 1) f.toFun = (1 : Aˣ))
-  : FormalGroup A where
-  toFun := F_add_inv f hf
-  zero_coeff := F_add_inv.zero_coeff f hf
-  lin_coeff_X := F_add_inv.lin_coeff_X f hf
-  lin_coeff_Y := F_add_inv.lin_coeff_Y f hf
-  assoc := F_add_inv.assoc f hf
+-- /-- `F(X, Y) = f⁻¹(f(X) + f(Y))` is a Formal Group Law. -/
+-- -- noncomputable instance F_add_inv_FG (f : PowerSeriesZeroConst A)
+-- --   (hf : MvPowerSeries.coeff A (Finsupp.equivFunOnFinite.invFun 1) f.toFun = (1 : Aˣ))
+-- --   : FormalGroup A where
+-- --   toFun := F_add_inv f hf
+-- --   zero_coeff := F_add_inv.zero_coeff f hf
+-- --   lin_coeff_X := F_add_inv.lin_coeff_X f hf
+-- --   lin_coeff_Y := F_add_inv.lin_coeff_Y f hf
+-- --   assoc := F_add_inv.assoc f hf
 
 
 
@@ -456,6 +594,7 @@ variable {K : Type*} [CommRing K] {A : Subring K} [CommRing A] {𝔞 : Ideal A}
 variable {p n q: ℕ} (hp : Nat.Prime p) (hn : n ≥ 1) (hq : q = p ^ n)
 variable {σ : K →+* K}  (hs : ∀ (a : A), σ a ∈ A) {x : A} (hs_mod : ∀ (a : A), (⟨σ a, hs a⟩) ≡ a ^ q  [SMOD 𝔞])
 variable (hp : (p : A) ∈ 𝔞) {s : ℕ → K} (hs_i : ∀ (i : ℕ), ∀ (a : 𝔞), (s i) * a ∈ A)
+
 -- variable (ha : ∀ (r : ℕ), ∀ (b : K), b • 𝔞 ^ r ⊆ 𝔞 → (σ b) • (𝔞 ^ r) ⊆ 𝔞)
 -- variable (ha : ∀ (r : ℕ), ∀ (b : K),  (∀ (x : (𝔞 ^ r)),  b * x ∈ (𝔞 ^ r)) → (∀ (x : (𝔞 ^ r)), (σ b) * x ∈ 𝔞 ^ r) )
 -- Why the above does not work.
