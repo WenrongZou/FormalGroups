@@ -52,10 +52,10 @@ def coeff_Y : Fin 2 → ℕ
 #check Finsupp.equivFunOnFinite.invFun coeff_X
 #check subst
 
--- noncomputable def X : MvPowerSeries (Fin 2) R := MvPowerSeries.X (0 : Fin 2)
+noncomputable abbrev X₀ : MvPowerSeries (Fin 2) R := MvPowerSeries.X (0 : Fin 2)
 
--- noncomputable def Y : MvPowerSeries (Fin 2) R := MvPowerSeries.X (1 : Fin 2)
--- make them as abbrev
+noncomputable abbrev X₁ : MvPowerSeries (Fin 2) R := MvPowerSeries.X (1 : Fin 2)
+
 
 noncomputable def sub_fir_aux {A : Type*} [CommRing A]: Fin 2 → MvPowerSeries (Fin 3) A
   | ⟨0, _⟩ => MvPowerSeries.X (0 : Fin 3)
@@ -70,13 +70,13 @@ noncomputable def sub_sec_aux {A : Type*} [CommRing A]: Fin 2 → MvPowerSeries 
 
 -- (0 : Fin 2) ↦ F(X, Y), (1 : Fin 2) ↦ Z
 noncomputable def sub_fir {A : Type*} [CommRing A] (F : MvPowerSeries (Fin 2) A): Fin 2 → MvPowerSeries (Fin 3) A
-  | ⟨0, _⟩ => @MvPowerSeries.subst _ A _ _ A _  _ (sub_fir_aux) F
+  | ⟨0, _⟩ => MvPowerSeries.subst (sub_fir_aux) F
   | ⟨1, _⟩ => MvPowerSeries.X (2 : Fin 3)
 
 -- (0 : Fin 2) ↦ X, (1 : Fin 2) ↦ F (Y, Z)
 noncomputable def sub_sec {A : Type*} [CommRing A] (F : MvPowerSeries (Fin 2) A): Fin 2 → MvPowerSeries (Fin 3) A
   | ⟨0, _⟩ => MvPowerSeries.X (0 : Fin 3)
-  | ⟨1, _⟩ => @MvPowerSeries.subst _ A _ _ A _  _ (sub_sec_aux) F
+  | ⟨1, _⟩ => MvPowerSeries.subst (sub_sec_aux) F
 
 -- (0 : Fin 2) ↦ Y, (1 : Fin 2) ↦ X
 noncomputable def sub_symm {A : Type*} [CommRing A] : Fin 2 → MvPowerSeries (Fin 2) A
@@ -95,11 +95,11 @@ structure FormalGroup (A : Type*) [CommRing A]  where
   zero_coeff : MvPowerSeries.coeff A 0 toFun = 0
   lin_coeff_X : MvPowerSeries.coeff A (Finsupp.single 0 1) toFun = 1
   lin_coeff_Y : MvPowerSeries.coeff A (Finsupp.single 1 1) toFun = 1
-  assoc : @MvPowerSeries.subst _ A _ _ A _  _ (sub_fir toFun) toFun = @MvPowerSeries.subst _ A _ _ A _  _ (sub_sec toFun) toFun
+  assoc : MvPowerSeries.subst (sub_fir toFun) toFun = MvPowerSeries.subst (sub_sec toFun) toFun
   --  Associativity of the Formal Group : `F (F (X, Y), Z) = F (X, F (Y, Z))`.
 
 structure CommFormalGroup (A : Type*) [CommRing A] extends FormalGroup A where
-  comm : toFun = @MvPowerSeries.subst _ A _ _ A _  _ (sub_symm) toFun
+  comm : toFun = MvPowerSeries.subst (sub_symm) toFun
 -- Commutativity F (X, Y) = F (Y, X)
 
 
@@ -107,26 +107,26 @@ structure CommFormalGroup (A : Type*) [CommRing A] extends FormalGroup A where
 
 /-- Formal Power Series with zero constant term. -/
 structure PowerSeriesZeroConst (A : Type*) [CommRing A] where
-  toFun : MvPowerSeries (Fin 1) A
+  toFun : PowerSeries A
   zero_coeff : MvPowerSeries.coeff A 0 toFun = 0
--- change all MvPowerSeries (Fin 1) A = PowerSeries
+
 
 -- a (F (X, Y))
-noncomputable def sub_hom₁ {A : Type*} [CommRing A]  (F : MvPowerSeries (Fin 2) A): Fin 1 → MvPowerSeries (Fin 2) A
-  | ⟨0, _⟩ => F
+-- noncomputable def sub_hom₁ {A : Type*} [CommRing A]  (F : MvPowerSeries (Fin 2) A): MvPowerSeries (Fin 2) A
+--   | ⟨0, _⟩ => F
 
 -- G (a (X), a (Y))
-noncomputable def sub_hom₂ {A : Type*} [CommRing A] (a : MvPowerSeries (Fin 1) A):
+noncomputable def sub_hom₂ {A : Type*} [CommRing A] (a : PowerSeries  A):
   Fin 2 → MvPowerSeries (Fin 2) A
-  | ⟨0, _⟩ => @MvPowerSeries.subst _ A _ _ A _  _ (sub_hom₁ (MvPowerSeries.X (0 : Fin 2))) a
-  | ⟨1, _⟩ => @MvPowerSeries.subst _ A _ _ A _  _ (sub_hom₁ (MvPowerSeries.X (1 : Fin 2))) a
+  | ⟨0, _⟩ => PowerSeries.subst  ((MvPowerSeries.X (0 : Fin 2))) a
+  | ⟨1, _⟩ => PowerSeries.subst  ((MvPowerSeries.X (1 : Fin 2))) a
 
 /-- Let `G₁, G₂` be two formal group laws over `CommRing A`. A homomorphism (over `A`)
   `F (X, Y) → G (X, Y)` is a power series `α(X) = b₁ * X + b₂ * X ^ 2 + ⋯` with coefficients
   in `A` without constant term such that `α(F (X, Y)) = G (α (X), α (Y))`. -/
 structure FormalGroupHom {A : Type*} [CommRing A] (G₁ G₂ : FormalGroup A) extends
   PowerSeriesZeroConst A where
-  hom : MvPowerSeries.subst (sub_hom₁ G₁.toFun) toFun = @MvPowerSeries.subst _ A _ _ A _  _ (sub_hom₂ toFun) G₂.toFun
+  hom : PowerSeries.subst (G₁.toFun) toFun = MvPowerSeries.subst (R := A) (sub_hom₂ toFun) G₂.toFun
   --         a (F (X, Y))                    =          G (a (X), a (Y))
 
 namespace FormalGroups
@@ -135,8 +135,8 @@ namespace FormalGroups
   homomorphism `β(X) : G (X, Y) → F (X, Y)` such that `α(β(X)) = X = β(α(X))`. -/
 
 def IsIso {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A} (α : FormalGroupHom G₁ G₂) : Prop :=
-  ∃ (β : FormalGroupHom G₂ G₁), @MvPowerSeries.subst _ A _ _ A _  _ (fun _ => β.toFun) α.toFun = MvPowerSeries.X (0 : Fin 1)
-  ∧ @MvPowerSeries.subst _ A _ _ A _  _ (fun _ => α.toFun) β.toFun = MvPowerSeries.X (0 : Fin 1)
+  ∃ (β : FormalGroupHom G₂ G₁), PowerSeries.subst  (fun _ => β.toFun) α.toFun = PowerSeries.X
+  ∧ PowerSeries.subst (fun _ => α.toFun) β.toFun = PowerSeries.X
 -- define it to be Equiv.
 
 /-- An isomorphism `α(X) : F (X, Y) → G (X, Y)`, `α(X) = b₁ * X + b₂ * X ^ 2 + ⋯` is called strict isomorphism if `b₁ = 1`.-/
@@ -157,64 +157,126 @@ theorem isIso_iff_UnitCoeff {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A}
 
 namespace FormalGroups
 
+
+-- change toFun to be MvPowerSeries
+-- use subst_add
+
 noncomputable instance {A : Type*} [CommRing A] [UniformSpace A] : CommFormalGroup A where
-  toFun := MvPolynomial.toMvPowerSeries (MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2))
+  toFun := (MvPowerSeries.X (0 : Fin 2) + MvPowerSeries.X (1 : Fin 2))
   zero_coeff := by
     simp only [Fin.isValue, MvPolynomial.coe_add, MvPolynomial.coe_X,
     MvPowerSeries.coeff_zero_eq_constantCoeff, map_add, MvPowerSeries.constantCoeff_X, add_zero]
   lin_coeff_X := by
-    rw [MvPolynomial.coeff_coe, MvPolynomial.coeff_add]
-    calc
-      _ = (1 : A) + (0 : A) := by
-        simp only [Fin.isValue, MvPolynomial.coeff_single_X, and_self, ↓reduceIte, one_ne_zero,
-          and_false, add_zero]
-      _ = 1 := by norm_num
+    simp only [Fin.isValue, map_add, coeff_index_single_self_X, add_right_eq_self]
+    rw [MvPowerSeries.coeff_index_single_X]
+    simp only [Fin.isValue, zero_ne_one, ↓reduceIte]
   lin_coeff_Y := by
-    rw [MvPolynomial.coeff_coe, MvPolynomial.coeff_add]
-    calc
-      _ = (0 : A) + (1 : A) := by
-        simp only [Fin.isValue, MvPolynomial.coeff_single_X, zero_ne_one, and_false, ↓reduceIte,
-          and_self, zero_add]
-      _ = 1 := by norm_num
+    simp only [Fin.isValue, map_add, coeff_index_single_self_X, add_right_eq_self]
+    rw [MvPowerSeries.coeff_index_single_X]
+    simp only [Fin.isValue, one_ne_zero, ↓reduceIte, zero_add]
   assoc := by
-    unfold MvPowerSeries.subst
-    let f : MvPolynomial (Fin 2) A := (MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2))
-    have hf := Classical.epsilon_spec
-      (p := fun (p : MvPolynomial (Fin 2) A) ↦ p = (f : MvPowerSeries (Fin 2) A)) ⟨f, rfl⟩
-    unfold eval₂
-    rw [if_pos hf]
-    rw [if_pos hf]
+    have sub₁ : MvPowerSeries.SubstDomain sub_fir_aux (S := A) :=
+      { const_coeff := by
+          intro s
+          unfold sub_fir_aux
+          by_cases hs : s = 0
+          simp only [hs, Fin.isValue, MvPowerSeries.constantCoeff_X, IsNilpotent.zero]
+          have hs' : s = 1 := by omega
+          simp only [hs', Fin.isValue, MvPowerSeries.constantCoeff_X, IsNilpotent.zero]
+        tendsto_zero := by
+          simp only [Filter.cofinite_eq_bot, Filter.tendsto_bot] }
+    have sub₂ : MvPowerSeries.SubstDomain sub_sec_aux (S := A) :=
+      { const_coeff := by
+          intro s
+          unfold sub_sec_aux
+          by_cases hs : s = 0
+          simp only [hs, Fin.isValue, MvPowerSeries.constantCoeff_X, IsNilpotent.zero]
+          have hs' : s = 1 := by omega
+          simp only [hs', Fin.isValue, MvPowerSeries.constantCoeff_X, IsNilpotent.zero]
+        tendsto_zero := by
+          simp only [Filter.cofinite_eq_bot, Filter.tendsto_bot] }
+    have sub_aux : MvPowerSeries.SubstDomain (sub_fir (MvPowerSeries.X 0 + MvPowerSeries.X 1)) (S:= A) :=
+      { const_coeff := by
+          intro s
+          unfold sub_fir
+          by_cases hs : s = 0
+          simp only [hs, Fin.isValue]
+          rw [MvPowerSeries.subst_add sub₁, MvPowerSeries.subst_X sub₁, MvPowerSeries.subst_X sub₁]
+          unfold sub_fir_aux
+          simp only [Fin.isValue, map_add, MvPowerSeries.constantCoeff_X, add_zero,
+            IsNilpotent.zero]
+          have hs' : s = 1 := by omega
+          simp only [hs', Fin.isValue, MvPowerSeries.constantCoeff_X, IsNilpotent.zero]
+        tendsto_zero := by
+          simp only [Fin.isValue, Filter.cofinite_eq_bot, Filter.tendsto_bot]
+          }
+    have sub_aux' : MvPowerSeries.SubstDomain (sub_sec (MvPowerSeries.X 0 + MvPowerSeries.X 1)) (S:= A):=
+      { const_coeff := by
+          intro s
+          unfold sub_sec
+          by_cases hs : s = 0
+          simp only [hs, Fin.isValue]
+          simp only [Fin.isValue, MvPowerSeries.constantCoeff_X, IsNilpotent.zero]
+          have hs' : s = 1 := by omega
+          rw [MvPowerSeries.subst_add sub₂, MvPowerSeries.subst_X sub₂, MvPowerSeries.subst_X sub₂]
+          unfold sub_sec_aux
+          simp only [hs', Fin.isValue, map_add, MvPowerSeries.constantCoeff_X, add_zero,
+            IsNilpotent.zero]
+        tendsto_zero := by
+          simp only [Fin.isValue, Filter.cofinite_eq_bot, Filter.tendsto_bot]
+          }
+    rw [MvPowerSeries.subst_add sub_aux, MvPowerSeries.subst_add sub_aux',
+      MvPowerSeries.subst_X sub_aux, MvPowerSeries.subst_X sub_aux,
+      MvPowerSeries.subst_X sub_aux', MvPowerSeries.subst_X sub_aux']
     unfold sub_fir
     unfold sub_sec
-    have epsilon_aux : (epsilon fun (p : MvPolynomial (Fin 2) A) ↦ ↑p = MvPolynomial.X (0 : Fin 2) (R := A) + MvPolynomial.X (1 : Fin 2) (R := A)) =
-      MvPolynomial.X (0 : Fin 2) (R := A) + MvPolynomial.X (1 : Fin 2) (R := A) := by
-      unfold f at hf
-      norm_cast at hf
-    have eq_aux : MvPowerSeries.subst sub_fir_aux ((MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2) (R := A)): MvPolynomial (Fin 2) A ) (R := A)
-      = MvPowerSeries.X (0 : Fin 3) + MvPowerSeries.X (1 : Fin 3) (R := A):= by
-      unfold MvPowerSeries.subst
-      unfold MvPowerSeries.eval₂
-      rw [if_pos]
-      norm_cast
-      rw [epsilon_aux]
-      unfold sub_fir_aux
-      simp only [Fin.isValue, MvPolynomial.eval₂_add, MvPolynomial.eval₂_X]
-      norm_cast
-    have eq_aux' : MvPowerSeries.subst sub_sec_aux ((MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2)): MvPolynomial (Fin 2) A) (R := A)
-      = MvPowerSeries.X (1 : Fin 3) + MvPowerSeries.X (2 : Fin 3) (R := A):= by
-      unfold MvPowerSeries.subst
-      unfold MvPowerSeries.eval₂
-      rw [if_pos]
-      norm_cast
-      rw [epsilon_aux]
-      unfold sub_sec_aux
-      simp only [Fin.isValue, MvPolynomial.eval₂_add, MvPolynomial.eval₂_X]
-      norm_cast
-    rw [eq_aux, eq_aux']
-    norm_cast
-    rw [epsilon_aux]
-    simp only [Fin.isValue, MvPolynomial.eval₂_add, MvPolynomial.eval₂_X, MvPolynomial.eval₂_mul]
+    simp only [Fin.isValue]
+
+    rw [MvPowerSeries.subst_add sub₁, MvPowerSeries.subst_add sub₂, MvPowerSeries.subst_X sub₁,
+      MvPowerSeries.subst_X sub₁, MvPowerSeries.subst_X sub₂, MvPowerSeries.subst_X sub₂]
+    unfold sub_fir_aux
+    unfold sub_sec_aux
+    simp only [Fin.isValue]
     ring
+
+    -- unfold MvPowerSeries.subst
+    -- let f : MvPolynomial (Fin 2) A := (MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2))
+    -- have hf := Classical.epsilon_spec
+    --   (p := fun (p : MvPolynomial (Fin 2) A) ↦ p = (f : MvPowerSeries (Fin 2) A)) ⟨f, rfl⟩
+    -- unfold eval₂
+    -- rw [if_pos hf]
+    -- rw [if_pos hf]
+    -- unfold sub_fir
+    -- unfold sub_sec
+    -- have epsilon_aux : (epsilon fun (p : MvPolynomial (Fin 2) A) ↦ ↑p = MvPolynomial.X (0 : Fin 2) (R := A) + MvPolynomial.X (1 : Fin 2) (R := A)) =
+    --   MvPolynomial.X (0 : Fin 2) (R := A) + MvPolynomial.X (1 : Fin 2) (R := A) := by
+    --   unfold f at hf
+    --   norm_cast at hf
+    -- have eq_aux : MvPowerSeries.subst sub_fir_aux ((MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2) (R := A)): MvPolynomial (Fin 2) A ) (R := A)
+    --   = MvPowerSeries.X (0 : Fin 3) + MvPowerSeries.X (1 : Fin 3) (R := A):= by
+    --   unfold MvPowerSeries.subst
+    --   unfold MvPowerSeries.eval₂
+    --   rw [if_pos]
+    --   norm_cast
+    --   rw [epsilon_aux]
+    --   unfold sub_fir_aux
+    --   simp only [Fin.isValue, MvPolynomial.eval₂_add, MvPolynomial.eval₂_X]
+    --   norm_cast
+    -- have eq_aux' : MvPowerSeries.subst sub_sec_aux ((MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2)): MvPolynomial (Fin 2) A) (R := A)
+    --   = MvPowerSeries.X (1 : Fin 3) + MvPowerSeries.X (2 : Fin 3) (R := A):= by
+    --   unfold MvPowerSeries.subst
+    --   unfold MvPowerSeries.eval₂
+    --   rw [if_pos]
+    --   norm_cast
+    --   rw [epsilon_aux]
+    --   unfold sub_sec_aux
+    --   simp only [Fin.isValue, MvPolynomial.eval₂_add, MvPolynomial.eval₂_X]
+    --   norm_cast
+    -- rw [eq_aux, eq_aux']
+    -- norm_cast
+    -- rw [epsilon_aux]
+    -- simp only [Fin.isValue, MvPolynomial.eval₂_add, MvPolynomial.eval₂_X, MvPolynomial.eval₂_mul]
+    -- ring
   comm := by
     simp only [Fin.isValue, MvPolynomial.coe_add, MvPolynomial.coe_X]
     unfold MvPowerSeries.subst
@@ -332,15 +394,24 @@ noncomputable instance MulFormalGroup {A : Type*} [CommRing A] : CommFormalGroup
     norm_cast at hf
 
 -- X ↦ X, Y ↦ a (X)
-noncomputable def sub_sec' {A : Type*} [CommRing A] (a : PowerSeriesZeroConst A) : Fin 2 → MvPowerSeries (Fin 1) A
-  | ⟨0, _⟩ => MvPowerSeries.X (0 : Fin 1)
+noncomputable def sub_sec' {A : Type*} [CommRing A] (a : PowerSeriesZeroConst A) : Fin 2 → PowerSeries A
+  | ⟨0, _⟩ => PowerSeries.X
   | ⟨1, _⟩ => a.toFun
   -- cast a one variable power series to multivariable power series
 
 
 theorem inv_exist {A : Type*} [CommRing A] {F : FormalGroup A} :
-∃! (ι : PowerSeriesZeroConst A), @MvPowerSeries.coeff (Fin 1) A _ (Finsupp.equivFunOnFinite.invFun (1 : Fin 1 → ℕ)) ι.toFun = - 1 ∧
-@MvPowerSeries.subst _ A _ _ A _  _ (sub_sec' ι) F.toFun  = 0 := sorry
+∃! (ι : PowerSeriesZeroConst A), PowerSeries.coeff  A 1 ι.toFun = - 1 ∧
+MvPowerSeries.subst (sub_sec' ι) F.toFun  = 0 := by
+  let ι : PowerSeriesZeroConst A := by sorry
+  use ι
+  constructor
+  -- prove `ι` satisfies the property
+  ·
+    sorry
+  -- prove the uniqueness of `ι`.
+  ·
+    sorry
 
 /-- A formal Group law `F (X, Y)` over a ring `L` is a universal formal group law if and only if for every formal group law
   `G (X, Y)` over a ring `A` there is a unique ring homomorphism `ϕ L → A` such that `ϕ F (X, Y) = G (X, Y)`.-/
@@ -386,14 +457,14 @@ instance : CommRing (A ⊗[ℤ] ℚ) := sorry
   where `u ∈ Aˣ`, then there is `g ∈ A ⟦X⟧`, such that `f(g(X)) = g(f(X)) = X`. -/
 theorem exist_subst_inv {u : Aˣ} {f : PowerSeriesZeroConst A}
   (hf : MvPowerSeries.coeff A (Finsupp.equivFunOnFinite.invFun 1) f.toFun = u) :
-  ∃ (g :PowerSeriesZeroConst A), @MvPowerSeries.subst _ A _ _ A _  _ (fun _ => f.toFun) g.toFun = MvPowerSeries.X (0 : Fin 1)
-  ∧ @MvPowerSeries.subst _ A _ _ A _  _ (fun _ => g.toFun) f.toFun = MvPowerSeries.X (0 : Fin 1)
+  ∃ (g :PowerSeriesZeroConst A), PowerSeries.subst (fun _ => f.toFun) g.toFun = PowerSeries.X
+  ∧ PowerSeries.subst (fun _ => g.toFun) f.toFun = PowerSeries.X
   := sorry
 
-theorem exist_subst_inv' {u : Aˣ} {f : MvPowerSeries (Fin 1) A}
-  (hf : MvPowerSeries.coeff A (Finsupp.equivFunOnFinite.invFun 1) f = u) :
-  ∃ (g : MvPowerSeries (Fin 1) A), @MvPowerSeries.subst _ A _ _ A _  _ (fun _ => f) g = MvPowerSeries.X (0 : Fin 1)
-  ∧ @MvPowerSeries.subst _ A _ _ A _  _ (fun _ => g) f = MvPowerSeries.X (0 : Fin 1)
+theorem exist_subst_inv' {u : Aˣ} {f : PowerSeries A}
+  (hf : PowerSeries.coeff A 1 f = u) :
+  ∃ (g : PowerSeries  A), PowerSeries.subst f g = PowerSeries.X
+  ∧ PowerSeries.subst g f = PowerSeries.X
   := sorry
 
 -- todo: general case of the above theorem for `n` dimensional case.
@@ -407,9 +478,9 @@ noncomputable def subst_inv {u : Aˣ} (f : PowerSeriesZeroConst A)
     choose g hg using exist_subst_inv hf
     exact g
 
-noncomputable def subst_inv' {u : Aˣ} (f : MvPowerSeries (Fin 1) A)
-  (hf : MvPowerSeries.coeff A (Finsupp.equivFunOnFinite.invFun 1) f = u) :
-  MvPowerSeries (Fin 1) A:= by
+noncomputable def subst_inv' {u : Aˣ} (f : PowerSeries A)
+  (hf : PowerSeries.coeff A 1 f = u) :
+  PowerSeries A:= by
     choose g hg using exist_subst_inv' hf
     exact g
 
@@ -574,7 +645,7 @@ instance : Fintype (IsLocalRing.ResidueField A):= sorry
 def card_residue : ℕ := Fintype.card (IsLocalRing.ResidueField A)
 
 -- `problem here ----------------------------------  ---------------- ASK`
--- noncomputable def LubinTate_f: MvPowerSeries (Fin 1) (A ⊗[ℤ] ℚ) :=
+-- noncomputable def LubinTate_f: PowerSeries (A ⊗[ℤ] ℚ) :=
 --   fun e =>
 --     if ∃ (n : ℕ), (e 0) = (card_residue : ℕ) ^ n then ϖ ^ (-n)
 --     else 0
@@ -631,7 +702,7 @@ noncomputable def RecurFun_aux (g : PowerSeriesZeroConst A) (n : ℕ): K :=
   else ∑ (i : Fin (multiplicity q n)), ((s i) * (σ^[i] (MvPowerSeries.coeff A (Finsupp.equivFunOnFinite.invFun (n / (q ^ (i : ℕ)))) g.toFun)))
 
 -- need to change here, about the coefficient of the MvPowerSeries, in A or in K
-noncomputable def RecurFun (g : PowerSeriesZeroConst A) : MvPowerSeries (Fin 1) K :=
+noncomputable def RecurFun (g : PowerSeriesZeroConst A) : PowerSeries K :=
   fun coeff =>
     if multiplicity q n = 0 then MvPowerSeries.coeff A (Finsupp.equivFunOnFinite.invFun (coeff 0)) g.toFun
     else
@@ -658,43 +729,43 @@ noncomputable def RecurFun (g : PowerSeriesZeroConst A) : MvPowerSeries (Fin 1) 
 def IsSameType (g : PowerSeriesZeroConst A) (g_bar : PowerSeriesZeroConst A) : Prop :=
   g.toFun ≠ g_bar.toFun ∧ (@RecurFun K _ A _ n q σ s g = @RecurFun K _ A _ n q σ s g_bar)
 
-def Coeff_cast (g : PowerSeriesZeroConst A) :  MvPowerSeries (Fin 1) K :=
-  MvPowerSeries.map (Fin 1) (Subring.subtype A) g.toFun
+def Coeff_cast (g : PowerSeriesZeroConst A) :  PowerSeries K :=
+  PowerSeries.map  (Subring.subtype A) g.toFun
 
 noncomputable def F_g (g : PowerSeriesZeroConst A)
-  (hg : MvPowerSeries.coeff K (Finsupp.equivFunOnFinite.invFun 1) (@RecurFun K _ A _ n q σ s g) = (1 : Kˣ))
+  (hg : PowerSeries.coeff K 1 (@RecurFun K _ A _ n q σ s g) = (1 : Kˣ))
   : MvPowerSeries (Fin 2) K :=
-  MvPowerSeries.subst (fun _ => ((MvPowerSeries.subst (fun _ => MvPowerSeries.X (0 : Fin 2)) (@RecurFun K _ A _ n q σ s g)) + (MvPowerSeries.subst (fun _ => MvPowerSeries.X (1 : Fin 2)) (@RecurFun K _ A _ n q σ s g)))) ((FormalGroupsWithCharZero.subst_inv' (@RecurFun K _ A _ n q σ s g) hg))
+  PowerSeries.subst (((PowerSeries.subst (MvPowerSeries.X (0 : Fin 2))  (@RecurFun K _ A _ n q σ s g)) + (PowerSeries.subst (MvPowerSeries.X (1 : Fin 2)) (@RecurFun K _ A _ n q σ s g)))) ((FormalGroupsWithCharZero.subst_inv' (@RecurFun K _ A _ n q σ s g) hg))
 
 
 theorem FunEqLem_one (g : PowerSeriesZeroConst A)
-  (hg : MvPowerSeries.coeff K (Finsupp.equivFunOnFinite.invFun 1) (@RecurFun K _ A _ n q σ s g) = (1 : Kˣ)) :
+  (hg : PowerSeries.coeff K 1 (@RecurFun K _ A _ n q σ s g) = (1 : Kˣ)) :
   ∀ (n : (Fin 2) →₀ ℕ), MvPowerSeries.coeff K n (F_g g hg) ∈ A := sorry
 
 noncomputable def inv_comp_bar (g : PowerSeriesZeroConst A) (g_bar : PowerSeriesZeroConst A)
-  : MvPowerSeries (Fin 1) K :=
+  : PowerSeries K :=
   MvPowerSeries.subst (fun _ => (@RecurFun K _ A _ n q σ s g)) (@RecurFun K _ A _ n q σ s g_bar)
 
 theorem FunEqLem_two (g : PowerSeriesZeroConst A) (g_bar : PowerSeriesZeroConst A) :
-  ∀ (n' : (Fin 1) →₀ ℕ), MvPowerSeries.coeff K n' (@inv_comp_bar K _ A _ n q σ s  g g_bar) ∈ A := sorry
+  ∀ (n' :ℕ), PowerSeries.coeff K n' (@inv_comp_bar K _ A _ n q σ s  g g_bar) ∈ A := sorry
 
 theorem FunEqLem_three (g : PowerSeriesZeroConst A) (h : PowerSeriesZeroConst A)
-  : ∃ (h_hat : PowerSeriesZeroConst A), MvPowerSeries.subst (fun _ => (Coeff_cast h)) (@RecurFun K _ A _ n q σ s g) = (@RecurFun K _ A _ n q σ s h_hat) := sorry
+  : ∃ (h_hat : PowerSeriesZeroConst A), PowerSeries.subst ((Coeff_cast h)) (@RecurFun K _ A _ n q σ s g) = (@RecurFun K _ A _ n q σ s h_hat) := sorry
 
 -- Ideal.Quotient.mk
 
-def coeff_mod (g : MvPowerSeries (Fin 1) A) (I : Ideal A)
-  : MvPowerSeries (Fin 1) (A ⧸ (I)):=
-  MvPowerSeries.map (Fin 1) (Ideal.Quotient.mk (I)) g
+def coeff_mod (g : PowerSeries A) (I : Ideal A)
+  : PowerSeries (A ⧸ (I)):=
+  PowerSeries.map (Ideal.Quotient.mk (I)) g
 
-def coeff_mod' (g : MvPowerSeries (Fin 1) A) (I : Ideal A) {r : ℕ}
-  : MvPowerSeries (Fin 1) (A ⧸ (I ^ r)):=
-  MvPowerSeries.map (Fin 1) (Ideal.Quotient.mk (I ^ r)) g
--- def coeff_mod' (g : MvPowerSeries (Fin 1) K) (I : Ideal A)
---   : MvPowerSeries (Fin 1) (K ⧸ (I)):=
---   MvPowerSeries.map (Fin 1) (Ideal.Quotient.mk (I)) g
+def coeff_mod' (g : PowerSeries  A) (I : Ideal A) {r : ℕ}
+  : PowerSeries (A ⧸ (I ^ r)):=
+  PowerSeries.map (Ideal.Quotient.mk (I ^ r)) g
+-- def coeff_mod' (g : PowerSeries  K) (I : Ideal A)
+--   : PowerSeries  (K ⧸ (I)):=
+--   PowerSeries.map  (Ideal.Quotient.mk (I)) g
 
--- theorem FunEqLem_four {α : MvPowerSeries (Fin 1) A} {β : MvPowerSeries (Fin 1) K} {r : ℕ}
+-- theorem FunEqLem_four {α : MvPowerSeries A} {β : PowerSeries  K} {r : ℕ}
 --   {hr : r ≥ 1}
 --   : coeff_mod α (𝔞 ^ r) = coeff_mod β (𝔞 ^ r) := sorry
 
