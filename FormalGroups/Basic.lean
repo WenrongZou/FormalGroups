@@ -231,7 +231,6 @@ noncomputable instance {A : Type*} [CommRing A] [UniformSpace A] : CommFormalGro
     unfold sub_fir
     unfold sub_sec
     simp only [Fin.isValue]
-
     rw [MvPowerSeries.subst_add sub₁, MvPowerSeries.subst_add sub₂, MvPowerSeries.subst_X sub₁,
       MvPowerSeries.subst_X sub₁, MvPowerSeries.subst_X sub₂, MvPowerSeries.subst_X sub₂]
     unfold sub_fir_aux
