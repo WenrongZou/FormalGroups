@@ -897,6 +897,7 @@ def coeff_mod' (g : PowerSeries  A) (I : Ideal A) {r : ℕ}
 
 -- (hs_mod : ∀ (a : A), σ a - a ^ q ∈ 𝔞)
 -- variable (hp_in : (p : ℤ) ∈ 𝔞)
+--
 
 
 end FunctionalEquationIntegralityLemma
