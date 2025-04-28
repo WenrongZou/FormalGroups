@@ -254,9 +254,13 @@ theorem isIso_iff_UnitCoeff {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A}
           rw [hb2]
           unfold sub_hom₂
           rw [PowerSeries.subst_X, PowerSeries.subst_X]
+
           sorry
-          sorry
-          sorry
+          refine PowerSeries.substDomain_of_constantCoeff_zero ?_
+          simp
+          refine PowerSeries.substDomain_of_constantCoeff_zero ?_
+          simp
+
         have eq_aux' : G₂.toFun
           = PowerSeries.subst (subst (sub_hom₂ g) G₁.toFun) α.toFun := by
           rw [eq_aux]

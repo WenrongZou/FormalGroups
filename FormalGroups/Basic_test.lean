@@ -199,9 +199,6 @@ theorem isIso_iff_UnitCoeff {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A}
 
 #check FormalGroup R
 
-
-namespace FormalGroups
-
 noncomputable instance {A : Type*} [CommRing A] [UniformSpace A] : FormalGroup A where
   toFun := MvPolynomial.toMvPowerSeries (MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2))
   zero_coeff := by
@@ -282,3 +279,38 @@ noncomputable instance {A : Type*} [CommRing A] [UniformSpace A] : FormalGroup A
     rw [epsilon_aux]
     simp only [Fin.isValue, MvPolynomial.eval₂_add, MvPolynomial.eval₂_X]
     ring
+
+open MvPowerSeries
+
+theorem sub_self {A : Type*} [CommRing A] (f : PowerSeries A):
+  PowerSeries.subst (PowerSeries.X) f = f := by
+  apply PowerSeries.ext
+  intro n
+  unfold PowerSeries.coeff
+  rw [PowerSeries.coeff_subst]
+  simp
+  have eq_aux : ∑ᶠ (d : ℕ), (PowerSeries.coeff A d) f *
+    (MvPowerSeries.coeff A (Finsupp.single () n)) (PowerSeries.X ^ d)
+    = (PowerSeries.coeff A n) f *
+    (MvPowerSeries.coeff A (Finsupp.single () n)) (PowerSeries.X ^ n)
+    := by
+    apply finsum_eq_single
+    intro x hx
+    have aux : (MvPowerSeries.coeff A (Finsupp.single () n))
+      (PowerSeries.X ^ x) = 0 := by
+
+      sorry
+    rw [aux]
+    simp
+  have eq_aux' : (MvPowerSeries.coeff A (Finsupp.single () n)) (PowerSeries.X ^ n) = 1 := by sorry
+  rw [eq_aux, eq_aux']
+  unfold PowerSeries.coeff
+  simp
+  exact PowerSeries.substDomain_X
+
+-- theorem sub_self' {A : Type*} [CommRing A] (f : PowerSeries A):
+--   PowerSeries.subst (PowerSeries.X) f = f := by
+--   unfold PowerSeries.subst
+--   unfold MvPowerSeries.subst
+--   refine (MvPowerSeries.eval₂_X )
+--   sorry
