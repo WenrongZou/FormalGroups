@@ -28,7 +28,7 @@ This file defines one dimensional formal group law over a ring `A`, homomorphism
 
 -/
 
-open Classical MvPowerSeries PowerSeries
+open Classical MvPowerSeries
 
 -- Definition of Formal Group
 
@@ -111,7 +111,7 @@ structure PowerSeriesZeroConst (A : Type*) [CommRing A] where
   zero_coeff : PowerSeries.coeff A 0 toFun = 0
 
 theorem SubstDomain_ZeroConst {A : Type*} [CommRing A] (α : PowerSeriesZeroConst A) :
-  SubstDomain α.toFun :=
+  PowerSeries.SubstDomain α.toFun :=
   {
     const_coeff := by
       obtain h1 := α.zero_coeff
@@ -167,6 +167,26 @@ theorem PowerSeries_subst_inv {A : Type*} [CommRing A] (f : PowerSeries A)
   PowerSeries.subst f g = PowerSeries.X
   ∧ PowerSeries.subst g f = PowerSeries.X ∧ PowerSeries.coeff A 0 g = 0 := sorry
 
+lemma subst_self {A : Type*} [CommRing A] (f : MvPowerSeries (Fin 2) A):
+  f =
+  MvPowerSeries.subst
+    (fun x ↦
+      match x with
+      | ⟨0, _⟩ => MvPowerSeries.X (0 : Fin 2)
+      | ⟨1, _⟩ => MvPowerSeries.X (1 : Fin 2))
+    f := by
+  have eq_aux : X = (fun (x : Fin 2) ↦
+      match x with
+      | ⟨0, isLt⟩ => MvPowerSeries.X (0 : Fin 2)
+      | ⟨1, isLt⟩ => MvPowerSeries.X (1 : Fin 2) (R := A)) := by
+    funext x
+    by_cases hx : x = 0
+    simp [hx]
+    have hx' : x = 1 := by omega
+    simp [hx']
+  rw [←eq_aux]
+  simp [←map_algebraMap_eq_subst_X f]
+
 
 theorem isIso_iff_UnitCoeff {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A} (α : FormalGroupHom G₁ G₂) :
   IsIso α ↔ IsUnit (PowerSeries.coeff A 1 α.toFun) := by
@@ -177,9 +197,9 @@ theorem isIso_iff_UnitCoeff {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A}
     obtain ⟨β, h₁, h₂⟩ := h
     obtain coeff_eq := PowerSeries.ext_iff.mp h₁ 1
     simp at coeff_eq
-    have subdomain_a : SubstDomain α.toFun := by
+    have subdomain_a : PowerSeries.SubstDomain α.toFun := by
       apply SubstDomain_ZeroConst
-    have subdomain_b : SubstDomain β.toFun := by
+    have subdomain_b : PowerSeries.SubstDomain β.toFun := by
       apply SubstDomain_ZeroConst
     have coeff_eq_mul : (PowerSeries.coeff A 1) (PowerSeries.subst β.toFun α.toFun) = (PowerSeries.coeff A 1 α.toFun) • (PowerSeries.coeff A 1 β.toFun) := by
       unfold PowerSeries.coeff
@@ -249,27 +269,30 @@ theorem isIso_iff_UnitCoeff {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A}
       zero_coeff := hb3
       hom := by
         simp
+        -- G (X, Y) = G (α(β(X)), α(β(Y)))
         have eq_aux : G₂.toFun =
           MvPowerSeries.subst (sub_hom₂ (PowerSeries.subst g α.toFun)) G₂.toFun := by
           rw [hb2]
           unfold sub_hom₂
           rw [PowerSeries.subst_X, PowerSeries.subst_X]
-
-          sorry
+          exact (subst_self G₂.toFun)
           refine PowerSeries.substDomain_of_constantCoeff_zero ?_
           simp
           refine PowerSeries.substDomain_of_constantCoeff_zero ?_
           simp
-
+        -- G(α(β(X)), α(β(Y))) = α(F (β(X), β(Y)))
         have eq_aux' : G₂.toFun
           = PowerSeries.subst (subst (sub_hom₂ g) G₁.toFun) α.toFun := by
           rw [eq_aux]
+          obtain h' := α.hom
 
           sorry
         rw [eq_aux']
         -- maybe need to change f here to satisfies some property that f ∈ PowerSeries.SubstDomain
         have subst_aux : ∀ (f : MvPowerSeries (Fin 2) A), PowerSeries.subst (PowerSeries.subst f α.toFun) g = f := by
           intro f
+
+
           sorry
         exact (subst_aux (MvPowerSeries.subst (sub_hom₂ g) G₁.toFun))
     }
@@ -504,7 +527,7 @@ MvPowerSeries.subst (sub_sec' ι) F.toFun  = 0 := by
       PowerSeries.mk (fun n => (io_aux F n).1)
       zero_coeff := by
         unfold io_aux
-        simp only [coeff_mk]
+        simp only [PowerSeries.coeff_mk]
     }
   use ι
   constructor

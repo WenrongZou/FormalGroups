@@ -66,7 +66,7 @@ This file defines one dimensional formal group law over a ring `A`, homomorphism
 
 -/
 
-open Classical MvPowerSeries PowerSeries
+open Classical MvPowerSeries
 
 -- Definition of Formal Group
 
@@ -282,35 +282,41 @@ noncomputable instance {A : Type*} [CommRing A] [UniformSpace A] : FormalGroup A
 
 open MvPowerSeries
 
-theorem sub_self {A : Type*} [CommRing A] (f : PowerSeries A):
+theorem sub_self {A : Type*} [CommRing A] (f : MvPowerSeries (Fin 2) A):
+  f =
+  MvPowerSeries.subst
+    (fun x ↦
+      match x with
+      | ⟨0, _⟩ => MvPowerSeries.X (0 : Fin 2)
+      | ⟨1, _⟩ => MvPowerSeries.X (1 : Fin 2))
+    f := by
+  have eq_aux : X = (fun (x : Fin 2) ↦
+      match x with
+      | ⟨0, isLt⟩ => MvPowerSeries.X (0 : Fin 2)
+      | ⟨1, isLt⟩ => MvPowerSeries.X (1 : Fin 2) (R := A)) := by
+    funext x
+    by_cases hx : x = 0
+    simp [hx]
+    have hx' : x = 1 := by omega
+    simp [hx']
+  rw [←eq_aux]
+  simp [←map_algebraMap_eq_subst_X f]
+
+
+theorem sub_self' {A : Type*} [CommRing A] (f : PowerSeries A):
   PowerSeries.subst (PowerSeries.X) f = f := by
-  apply PowerSeries.ext
-  intro n
-  unfold PowerSeries.coeff
-  rw [PowerSeries.coeff_subst]
-  simp
-  have eq_aux : ∑ᶠ (d : ℕ), (PowerSeries.coeff A d) f *
-    (MvPowerSeries.coeff A (Finsupp.single () n)) (PowerSeries.X ^ d)
-    = (PowerSeries.coeff A n) f *
-    (MvPowerSeries.coeff A (Finsupp.single () n)) (PowerSeries.X ^ n)
-    := by
-    apply finsum_eq_single
-    intro x hx
-    have aux : (MvPowerSeries.coeff A (Finsupp.single () n))
-      (PowerSeries.X ^ x) = 0 := by
+  simp [←PowerSeries.map_algebraMap_eq_subst_X f]
 
-      sorry
-    rw [aux]
-    simp
-  have eq_aux' : (MvPowerSeries.coeff A (Finsupp.single () n)) (PowerSeries.X ^ n) = 1 := by sorry
-  rw [eq_aux, eq_aux']
-  unfold PowerSeries.coeff
+theorem sub_self₁ {A : Type*} [CommRing A] (f : MvPowerSeries (Fin 2) A):
+  f =
+  MvPowerSeries.subst
+    X
+    f := by
+  rw [←map_algebraMap_eq_subst_X f]
   simp
-  exact PowerSeries.substDomain_X
 
--- theorem sub_self' {A : Type*} [CommRing A] (f : PowerSeries A):
---   PowerSeries.subst (PowerSeries.X) f = f := by
---   unfold PowerSeries.subst
---   unfold MvPowerSeries.subst
---   refine (MvPowerSeries.eval₂_X )
---   sorry
+theorem sub_assoc {A : Type*} [CommRing A] (f g h: PowerSeries  A) :
+  PowerSeries.subst (PowerSeries.subst h g) f
+    = PowerSeries.subst h (PowerSeries.subst g f) := by
+
+  sorry
