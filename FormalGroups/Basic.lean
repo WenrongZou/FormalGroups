@@ -168,6 +168,28 @@ noncomputable def invFun_aux {A : Type*} [CommRing A] (f : PowerSeries A)
   | n + 1 =>  (- (h.unit⁻¹) * PowerSeries.coeff A (n + 1) (PowerSeries.subst ((invFun_aux f h hc n).2) f) , (invFun_aux f h hc n).2 + PowerSeries.C A (- (h.unit⁻¹) * PowerSeries.coeff A (n + 1) (PowerSeries.subst ((invFun_aux f h hc n).2) f)) * (PowerSeries.X) ^ (n + 1))
 
 
+
+theorem subst_inv_aux₀ {A : Type*} [CommRing A] (f : PowerSeries A)
+  (h : IsUnit (PowerSeries.coeff A 1 f)) (hc : PowerSeries.constantCoeff A f = 0)
+  {n : ℕ} (hn : n ≥ 2)
+  : (PowerSeries.coeff A (n)) (PowerSeries.subst ((invFun_aux f h hc) n).2 f) = 0
+  := by
+  induction n with
+  | zero =>
+    simp at hn
+  | succ k ih =>
+    by_cases hn' : k < 1
+    linarith
+    by_cases hk : k = 1
+    sorry
+    have hk' : k ≥ 2 := by omega
+    obtain ih' := ih hk'
+    -- have poly_eq : (invFun_aux f h hc (k + 1)).2 = (invFun_aux f h hc k).2 +
+    --   (invFun_aux f h hc (k + 1)).1 := sorry
+
+    sorry
+
+
 theorem subst_inv_aux {A : Type*} [CommRing A] (f : PowerSeries A)
   (h : IsUnit (PowerSeries.coeff A 1 f)) (hc : PowerSeries.constantCoeff A f = 0)
    : ∃ (g : PowerSeries A), PowerSeries.subst g f = PowerSeries.X
@@ -220,8 +242,39 @@ theorem subst_inv_aux {A : Type*} [CommRing A] (f : PowerSeries A)
           · have hx_ge : x ≥ 2 := by omega
             have eq_zero : PowerSeries.coeff A 1 (g ^ x) = 0 := by
               rw [PowerSeries.coeff_pow]
-
-              sorry
+              have eq_aux : ∀ l ∈ (Finset.range x).finsuppAntidiag 1, ∃ i ∈ Finset.range x, (PowerSeries.coeff A (l i)) g = 0 := by
+                intro l hl
+                have i_zero : ∃ i ∈ Finset.range x, l i = 0 := by
+                  by_contra h'
+                  have i_contra : ∀ i ∈ Finset.range x, l i ≥ 1 := by
+                    intro i hi
+                    simp at h'
+                    simp at hi
+                    obtain hi' := h' i hi
+                    omega
+                  simp at hl
+                  obtain ⟨hl1, hl2⟩ := hl
+                  have ineq_aux : (Finset.range x).sum ⇑l ≥ x := by
+                    calc
+                      _ ≥ (Finset.range x).sum 1 := by
+                        apply Finset.sum_le_sum
+                        intro i hi
+                        exact (i_contra i hi)
+                      _ = x := by
+                        exact Finset.sum_range_induction 1 (fun x ↦ x) rfl (congrFun rfl) x
+                  linarith
+                obtain ⟨i, hi, hil⟩ := i_zero
+                use i
+                constructor
+                exact hi
+                simp [hil]
+                unfold g
+                unfold invFun_aux
+                simp
+              apply Finset.sum_eq_zero
+              intro l hl
+              obtain ⟨i, hi, hil⟩ := eq_aux l hl
+              exact (Finset.prod_eq_zero hi hil)
             unfold PowerSeries.coeff at eq_zero
             simp [eq_zero]
         _ = 1 := by
@@ -235,6 +288,11 @@ theorem subst_inv_aux {A : Type*} [CommRing A] (f : PowerSeries A)
           simp
       -- n ≥ 2
       have hn_two : n ≥ 2 := by omega
+      have eq_zero : (PowerSeries.coeff A n) PowerSeries.X = 0 := by
+        rw [PowerSeries.coeff_X, if_neg]
+        omega
+      rw [eq_zero]
+
 
       sorry
 

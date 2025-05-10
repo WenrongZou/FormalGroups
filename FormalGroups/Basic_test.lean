@@ -51,6 +51,7 @@ import Mathlib.RingTheory.LocalRing.ResidueField.Defs
 import Mathlib.RingTheory.Ideal.Basic
 import Mathlib.Logic.Function.Iterate
 import Mathlib.Data.Nat.PartENat
+import FormalGroups.TruncP
 
 /-!
 
@@ -305,7 +306,8 @@ theorem sub_self {A : Type*} [CommRing A] (f : MvPowerSeries (Fin 2) A):
 
 theorem sub_self' {A : Type*} [CommRing A] (f : PowerSeries A):
   PowerSeries.subst (PowerSeries.X) f = f := by
-  simp [←PowerSeries.map_algebraMap_eq_subst_X f]
+  simp only [← PowerSeries.map_algebraMap_eq_subst_X f, Algebra.id.map_eq_id, PowerSeries.map_id,
+    id_eq]
 
 theorem sub_self₁ {A : Type*} [CommRing A] (f : MvPowerSeries (Fin 2) A):
   f =
