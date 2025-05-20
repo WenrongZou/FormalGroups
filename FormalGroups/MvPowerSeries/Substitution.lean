@@ -248,6 +248,11 @@ noncomputable def subst (a : σ → MvPowerSeries τ S) (f : MvPowerSeries σ R)
   letI : UniformSpace S := ⊥
   MvPowerSeries.eval₂ (algebraMap _ _) a f
 
+/- add a example.-/
+noncomputable example [Algebra R S] (a : σ → PowerSeries S) (f : MvPowerSeries σ R) :
+    PowerSeries S :=
+  subst a f
+
 variable {a : σ → MvPowerSeries τ S}
 
 theorem SubstDomain.evalDomain (ha : SubstDomain a) :
@@ -834,6 +839,10 @@ variable {υ : Type*} -- [DecidableEq υ]
 noncomputable def subst [Algebra R S] (a : MvPowerSeries τ S) (f : PowerSeries R) :
     MvPowerSeries τ S :=
   MvPowerSeries.subst (fun _ ↦ a) f
+
+noncomputable example [Algebra R S] (a : PowerSeries S) (f : PowerSeries R) :
+    PowerSeries S :=
+  PowerSeries.subst a f
 
 variable {a : MvPowerSeries τ S}
 

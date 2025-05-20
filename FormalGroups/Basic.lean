@@ -13,7 +13,7 @@ import Mathlib.RingTheory.LocalRing.ResidueField.Defs
 import Mathlib.RingTheory.Ideal.Basic
 import Mathlib.Logic.Function.Iterate
 import Mathlib.Data.Nat.PartENat
-
+import FormalGroups.TruncP
 /-!
 
 ## One Dimensional Formal Group
@@ -35,9 +35,6 @@ open Classical MvPowerSeries
 -- Assume the coeffiecient ring `R` to be commutative ring.
 variable {R : Type*} [CommRing R] {σ : Type*} {G : MvPowerSeries (Fin 2) R} {x y : R}
 
-#check Fin 2
-#check (1 : Fin 2)
-#check MvPowerSeries (Fin 2) R
 
 /-- `coeff_X : Fin 2 → ℕ` is used to get the linear coefficient in two variable of `X`. -/
 def coeff_X : Fin 2 → ℕ
@@ -49,8 +46,6 @@ def coeff_Y : Fin 2 → ℕ
   | ⟨0, _⟩ => 0
   | ⟨1, _⟩ => 1
 
-#check Finsupp.equivFunOnFinite.invFun coeff_X
-#check subst
 
 noncomputable abbrev X₀ : MvPowerSeries (Fin 2) R := MvPowerSeries.X (0 : Fin 2)
 
@@ -83,7 +78,13 @@ noncomputable def sub_symm {A : Type*} [CommRing A] : Fin 2 → MvPowerSeries (F
   | ⟨0, _⟩ => X₁
   | ⟨1, _⟩ => X₀
 
+noncomputable def sub_X {A : Type*} [CommRing A] : Fin 2 → MvPowerSeries (Fin 2) A
+  | ⟨0, _⟩ => X₀
+  | ⟨1, _⟩ => 0
 
+noncomputable def sub_Y {A : Type*} [CommRing A] : Fin 2 → MvPowerSeries (Fin 2) A
+  | ⟨0, _⟩ => 0
+  | ⟨1, _⟩ => X₁
 
 #check subst (sub_fir G) G
 #check subst (sub_sec G) G
@@ -93,9 +94,9 @@ noncomputable def sub_symm {A : Type*} [CommRing A] : Fin 2 → MvPowerSeries (F
 structure FormalGroup (A : Type*) [CommRing A]  where
   toFun : MvPowerSeries (Fin 2) A
   zero_coeff : constantCoeff (Fin 2) A toFun = 0
-  lin_coeff_X : MvPowerSeries.coeff A (Finsupp.single 0 1) toFun = 1
-  lin_coeff_Y : MvPowerSeries.coeff A (Finsupp.single 1 1) toFun = 1
-  assoc : MvPowerSeries.subst (sub_fir toFun) toFun = MvPowerSeries.subst (sub_sec toFun) toFun
+  lin_coeff_X : subst sub_X toFun = X₀ (R := A)
+  lin_coeff_Y : subst sub_Y toFun = X₁ (R := A)
+  assoc : subst (sub_fir toFun) toFun = subst (sub_sec toFun) toFun
   --  Associativity of the Formal Group : `F (F (X, Y), Z) = F (X, F (Y, Z))`.
 
 structure CommFormalGroup (A : Type*) [CommRing A] extends FormalGroup A where
@@ -126,7 +127,7 @@ theorem SubstDomain_ZeroConst {A : Type*} [CommRing A] (α : PowerSeriesZeroCons
 --   | ⟨0, _⟩ => F
 
 -- G (a (X), a (Y))
-noncomputable def sub_hom₂ {A : Type*} [CommRing A] (a : PowerSeries  A):
+noncomputable def sub_hom {A : Type*} [CommRing A] (a : PowerSeries  A):
   Fin 2 → MvPowerSeries (Fin 2) A
   | ⟨0, _⟩ => PowerSeries.subst  X₀ a
   | ⟨1, _⟩ => PowerSeries.subst  X₁ a
@@ -136,7 +137,7 @@ noncomputable def sub_hom₂ {A : Type*} [CommRing A] (a : PowerSeries  A):
   in `A` without constant term such that `α(F (X, Y)) = G (α (X), α (Y))`. -/
 structure FormalGroupHom {A : Type*} [CommRing A] (G₁ G₂ : FormalGroup A) extends
   PowerSeriesZeroConst A where
-  hom : PowerSeries.subst (G₁.toFun) toFun = MvPowerSeries.subst (R := A) (sub_hom₂ toFun) G₂.toFun
+  hom : PowerSeries.subst (G₁.toFun) toFun = MvPowerSeries.subst (R := A) (sub_hom toFun) G₂.toFun
   --         a (F (X, Y))                    =          G (a (X), a (Y))
 
 namespace FormalGroups
@@ -149,7 +150,7 @@ open MvPowerSeries
 def IsIso {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A} (α : FormalGroupHom G₁ G₂) : Prop :=
   ∃ (β : FormalGroupHom G₂ G₁), PowerSeries.subst β.toFun α.toFun = PowerSeries.X
   ∧ PowerSeries.subst α.toFun β.toFun = PowerSeries.X
--- define it to be Equiv.
+-- can not define it to be Equiv.
 
 /-- An isomorphism `α(X) : F (X, Y) → G (X, Y)`, `α(X) = b₁ * X + b₂ * X ^ 2 + ⋯` is called strict isomorphism if `b₁ = 1`.-/
 def IsStrictIso {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A} {α : FormalGroupHom G₁ G₂} : Prop := IsIso α
@@ -168,27 +169,338 @@ noncomputable def invFun_aux {A : Type*} [CommRing A] (f : PowerSeries A)
   | n + 1 =>  (- (h.unit⁻¹) * PowerSeries.coeff A (n + 1) (PowerSeries.subst ((invFun_aux f h hc n).2) f) , (invFun_aux f h hc n).2 + PowerSeries.C A (- (h.unit⁻¹) * PowerSeries.coeff A (n + 1) (PowerSeries.subst ((invFun_aux f h hc n).2) f)) * (PowerSeries.X) ^ (n + 1))
 
 
+lemma coeff_zero_aux {A : Type*} [CommRing A] (f : PowerSeries A)
+ (h : IsUnit (PowerSeries.coeff A 1 f)) (hc : PowerSeries.constantCoeff A f = 0)
+  : invFun_aux f h hc 0 = (0, 0) := by
+  rfl
+
+lemma coeff_one_aux {A : Type*} [CommRing A] (f : PowerSeries A)
+ (h : IsUnit (PowerSeries.coeff A 1 f)) (hc : PowerSeries.constantCoeff A f = 0)
+  : invFun_aux f h hc 1 =
+    (((h.unit⁻¹ : Units A) : A), PowerSeries.C A ((h.unit⁻¹ : Units A) : A) * PowerSeries.X (R := A))
+    := by
+  rfl
+
+lemma coeff_aux' {A : Type*} [CommRing A] (f : PowerSeries A)
+ (h : IsUnit (PowerSeries.coeff A 1 f)) (hc : PowerSeries.constantCoeff A f = 0)
+  {n : ℕ } (hn : n ≠ 0): invFun_aux f h hc (n + 1) =
+    (- (h.unit⁻¹) * PowerSeries.coeff A (n + 1) (PowerSeries.subst ((invFun_aux f h hc n).2) f) , (invFun_aux f h hc n).2 + PowerSeries.C A (- (h.unit⁻¹) * PowerSeries.coeff A (n + 1) (PowerSeries.subst ((invFun_aux f h hc n).2) f)) * (PowerSeries.X) ^ (n + 1))
+    := by
+  conv =>
+    lhs
+    unfold invFun_aux
+  simp
+
+
+lemma trunc'_of_mk {A : Type*} [CommRing A] (f : ℕ → A) (n : ℕ) :
+  PowerSeries.trunc' (n + 1) (PowerSeries.mk f) = PowerSeries.trunc'
+  n (PowerSeries.mk f) + (Polynomial.C (f (n + 1))) * (Polynomial.X) ^ (n + 1) := by
+  unfold PowerSeries.trunc'
+  simp
+  unfold PowerSeries.truncFun'
+  have finset_aux : Finset.Iic (n + 1) = insert (n + 1) (Finset.Iic (n)) := by
+    refine (Finset.erase_eq_iff_eq_insert ?_ ?_).mp ?_
+    all_goals simp
+    exact rfl
+  rw [finset_aux]
+  simp [Finset.sum_insert]
+  conv =>
+    lhs
+    rw [add_comm]
+  congr
+  exact Eq.symm Polynomial.C_mul_X_pow_eq_monomial
+
+
 
 theorem subst_inv_aux₀ {A : Type*} [CommRing A] (f : PowerSeries A)
-  (h : IsUnit (PowerSeries.coeff A 1 f)) (hc : PowerSeries.constantCoeff A f = 0)
-  {n : ℕ} (hn : n ≥ 2)
-  : (PowerSeries.coeff A (n)) (PowerSeries.subst ((invFun_aux f h hc) n).2 f) = 0
-  := by
+ (h : IsUnit (PowerSeries.coeff A 1 f)) (hc : PowerSeries.constantCoeff A f = 0)
+ {n : ℕ}
+: let g : PowerSeries A := PowerSeries.mk (fun n => (invFun_aux f h hc n).1)
+  PowerSeries.trunc' n g = ((invFun_aux f h hc n).2) := by
+induction n with
+| zero =>
+  rw [coeff_zero_aux]
+  simp [PowerSeries.trunc']
+  ext d
+  simp [PowerSeries.coeff_truncFun']
+  intro hd
+  rw [hd]
+  rw [coeff_zero_aux]
+| succ k ih =>
+  by_cases hk : k = 0
+  rw [hk]
+  simp
+  rw [coeff_one_aux]
+  simp [PowerSeries.trunc']
+  ext d
+  simp [PowerSeries.coeff_truncFun']
+  by_cases hd : d = 0
+  simp [hd, coeff_zero_aux]
+  by_cases hd1 : d = 1
+  simp [hd1, coeff_one_aux]
+  have hd2 : ¬ d ≤ 1 := by
+    omega
+  simp [hd2, PowerSeries.coeff_X, if_neg hd1]
+  rw [coeff_aux' f h hc hk]
+  simp
+  rw [trunc'_of_mk]
+  nth_rw 1 [← ih]
+  norm_num
+  rw [coeff_aux' f h hc hk]
+  simp
+
+
+
+-- (PowerSeries.constantCoeff A) (invFun_aux f h hc k).2 = 0
+lemma subst_inv_aux₂ {A : Type*} [CommRing A] (f : PowerSeries A)
+ (h : IsUnit (PowerSeries.coeff A 1 f)) (hc : PowerSeries.constantCoeff A f = 0)
+ {n : ℕ}
+: (PowerSeries.constantCoeff A) (invFun_aux f h hc n).2 = 0 := by
+  rw [←subst_inv_aux₀]
   induction n with
   | zero =>
-    simp at hn
+    unfold PowerSeries.trunc'
+    unfold PowerSeries.truncFun'
+    simp
+    have set_eq : Finset.Iic 0 = {0} := rfl
+    rw [set_eq, Finset.sum_singleton, coeff_zero_aux]
+    simp
   | succ k ih =>
-    by_cases hn' : k < 1
-    linarith
-    by_cases hk : k = 1
-    sorry
-    have hk' : k ≥ 2 := by omega
-    obtain ih' := ih hk'
-    -- have poly_eq : (invFun_aux f h hc (k + 1)).2 = (invFun_aux f h hc k).2 +
-    --   (invFun_aux f h hc (k + 1)).1 := sorry
+    rw [trunc'_of_mk]
+    simp [ih]
 
-    sorry
 
+lemma substDomain_inv {A : Type*} [CommRing A] (f : PowerSeries A)
+ (h : IsUnit (PowerSeries.coeff A 1 f)) : PowerSeries.SubstDomain ((PowerSeries.C A) ↑h.unit⁻¹ * PowerSeries.X) := by
+  refine PowerSeries.substDomain_of_constantCoeff_zero ?_
+  have eq_aux : (PowerSeries.C A) (↑h.unit⁻¹ : A) * PowerSeries.X = (↑h.unit⁻¹ : A) • PowerSeries.X := by
+    exact Eq.symm (PowerSeries.smul_eq_C_mul PowerSeries.X (↑h.unit⁻¹ : A))
+  rw [eq_aux, constantCoeff_smul (PowerSeries.X (R := A)) (↑h.unit⁻¹ : A)]
+  unfold PowerSeries.X
+  simp
+
+lemma subst_pow_add {A : Type*} [CommRing A] (f g: PowerSeries A) (n : ℕ)
+  (hn₀ : n ≠ 0) (a : A) (hg : PowerSeries.constantCoeff A g = 0):
+  PowerSeries.coeff A n (PowerSeries.subst (g + (PowerSeries.C A) a * PowerSeries.X ^ n) f) = PowerSeries.coeff A n (PowerSeries.subst g f) + (PowerSeries.coeff A 1) f * a := by
+  rw [PowerSeries.coeff_subst', PowerSeries.coeff_subst']
+  have aux : ∑ᶠ (d : ℕ), (PowerSeries.coeff A d) f • (PowerSeries.coeff A n) ((g + (PowerSeries.C A) a * PowerSeries.X ^ n) ^ d) -
+  ∑ᶠ (d : ℕ), (PowerSeries.coeff A d) f • (PowerSeries.coeff A n) (g ^ d) = (PowerSeries.coeff A 1) f * a := by
+    rw [←finsum_sub_distrib, finsum_eq_single _ 1]
+    simp; ring
+    intro m hm
+    have eq_aux : (PowerSeries.coeff A n) ((g + (PowerSeries.C A) a * PowerSeries.X ^ n) ^ m) =
+      (PowerSeries.coeff A n) (g ^ m) := by
+      by_cases hm₀ : m = 0
+      rw [hm₀]
+      simp
+      have hm₂ : m ≥ 2 := by omega
+      rw [PowerSeries.coeff_pow, PowerSeries.coeff_pow]
+      have coeff_aux : ∀ l ∈ (Finset.range m).finsuppAntidiag n, ∏ i ∈ Finset.range m, (PowerSeries.coeff A (l i)) (g + (PowerSeries.C A) a * PowerSeries.X ^ n) =  ∏ i ∈ Finset.range m, (PowerSeries.coeff A (l i)) g := by
+        intro l hl
+        by_cases hi : ∃ i₀ ∈ Finset.range m, l i₀ = n
+        obtain ⟨i₀, hi₀, hi₁⟩ := hi
+        have ljzero : ∃ j ∈ (Finset.range m), l j = 0 := by
+          by_contra hc
+          simp at hc
+          have geone : ∀ x < m, l x ≥ 1 := by
+            intro x hx
+            obtain hc' := hc x hx
+            omega
+          simp at hl
+          obtain ⟨hl₁, hl₂⟩ := hl
+          have set_eq : (Finset.range m) = insert i₀ ((Finset.range m).erase i₀) := by
+            exact Eq.symm (Finset.insert_erase hi₀)
+          rw [set_eq, Finset.sum_insert, hi₁] at hl₁
+          have sum_ge_one : ∑ x ∈ (Finset.range m).erase i₀, l x ≥ 1 := by
+            calc
+              _ ≥ ∑ x ∈ (Finset.range m).erase i₀, 1 := by
+                refine Finset.sum_le_sum ?_
+                intro i hi
+                simp at hi
+                obtain ⟨hineq, hile⟩ := hi
+                exact geone i hile
+              _ = m - 1 := by
+                simp
+                have meq : m = (Finset.range m).card := by simp
+                nth_rw 2 [meq]
+                exact Finset.card_erase_of_mem hi₀
+              _ ≥ 1 := by omega
+          linarith
+          simp
+        obtain ⟨j, hj₀, hj⟩ := ljzero
+        have zero_aux₁ : (PowerSeries.coeff A (l j)) (g + (PowerSeries.C A) a * PowerSeries.X ^ n) = 0 := by
+          rw [hj]
+          simp [hg, zero_pow hn₀]
+        have zero_aux₂ : (PowerSeries.coeff A (l j)) (g) = 0 := by
+          rw [hj]
+          simp [hg]
+        rw [Finset.prod_eq_zero hj₀ zero_aux₁, Finset.prod_eq_zero hj₀ zero_aux₂]
+        have hi' : ∀ i ∈ (Finset.range m), l i < n := by
+          simp at hi
+          have hile : ∀ i < m, l i ≤ n := by
+            by_contra hc
+            simp at hc
+            obtain ⟨x, xle, hx⟩ := hc
+            simp at hl
+            obtain ⟨hl₁, hl₂⟩ := hl
+            have lt_aux : (Finset.range m).sum ⇑l > n := by
+              calc
+                _ ≥ l x := by
+                  refine Finset.single_le_sum ?_ ?_
+                  intro i hi_in
+                  linarith
+                  simp [xle]
+                _ > n := hx
+            linarith
+          intro i hi_in
+          simp at hi_in
+          obtain h₁ := hi i hi_in
+          obtain h₂ := hile i hi_in
+          exact lt_of_le_of_ne h₂ h₁
+        apply Finset.prod_congr
+        simp
+        simp [map_add]
+        intro i hile
+        rw [PowerSeries.coeff_X_pow, if_neg]
+        simp
+        obtain hi2 := hi' i (by simp [hile])
+        linarith
+      refine Finset.sum_congr (by simp) coeff_aux
+    rw [eq_aux]
+    ring
+    refine PowerSeries.coeff_subst_finite (PowerSeries.substDomain_of_constantCoeff_zero ?_) f (Finsupp.single () n)
+    unfold PowerSeries.constantCoeff at hg
+    unfold PowerSeries.X
+    simp [hg, constantCoeff_X, zero_pow hn₀]
+    refine PowerSeries.coeff_subst_finite (PowerSeries.substDomain_of_constantCoeff_zero ?_) f (Finsupp.single () n)
+    unfold PowerSeries.constantCoeff at hg
+    exact hg
+  conv =>
+    rhs
+    rw [← aux]
+  ring
+  exact PowerSeries.substDomain_of_constantCoeff_zero hg
+  refine PowerSeries.substDomain_of_constantCoeff_zero ?_
+  unfold PowerSeries.constantCoeff at hg
+  unfold PowerSeries.X
+  simp [hg, constantCoeff_X, zero_pow hn₀]
+
+
+
+theorem subst_inv_aux₁ {A : Type*} [CommRing A] (f : PowerSeries A)
+ (h : IsUnit (PowerSeries.coeff A 1 f)) (hc : PowerSeries.constantCoeff A f = 0)
+ {n : ℕ}
+:
+  (PowerSeries.trunc' n) (PowerSeries.subst (invFun_aux f h hc n).2 f) = (PowerSeries.trunc' n) PowerSeries.X := by
+  induction n with
+  | zero =>
+    rw [coeff_zero_aux]
+    have subst_zero : (PowerSeries.subst (0 : PowerSeries A) f) = 0 := by
+      refine PowerSeries.ext ?_
+      intro n
+      rw [PowerSeries.coeff_subst']
+      simp
+      apply finsum_eq_zero_of_forall_eq_zero
+      intro d
+      by_cases hd : d = 0
+      rw [hd]
+      simp
+      intro hn
+      exact hc
+      rw [zero_pow]
+      simp [hd]
+      exact hd
+      exact PowerSeries.substDomain_of_constantCoeff_zero rfl
+    rw [subst_zero]
+    simp
+    unfold PowerSeries.trunc'
+    simp
+    ext d
+    simp [PowerSeries.coeff_truncFun']
+    by_cases hd : d = 0
+    rw [if_pos hd, PowerSeries.coeff_X, if_neg]
+    simp [hd]
+    rw [if_neg hd]
+  | succ k ih =>
+    by_cases hk : k = 0
+    simp [hk]
+    rw [coeff_one_aux]
+    simp
+    unfold PowerSeries.trunc'
+    simp
+    ext d
+    simp [PowerSeries.coeff_truncFun']
+    by_cases hd0 : d = 0
+    rw [if_pos (by linarith), if_pos (by linarith), PowerSeries.coeff_subst']
+    simp [hd0]
+    apply finsum_eq_zero_of_forall_eq_zero
+    intro x
+    by_cases hx : x = 0
+    simp [hx, hc]
+    simp [zero_pow hx]
+    refine PowerSeries.substDomain_of_constantCoeff_zero ?_
+    have eq_aux : (PowerSeries.C A) (↑h.unit⁻¹ : A) * PowerSeries.X = (↑h.unit⁻¹ : A) • PowerSeries.X := by
+      exact Eq.symm (PowerSeries.smul_eq_C_mul PowerSeries.X (↑h.unit⁻¹ : A))
+    rw [eq_aux, constantCoeff_smul (PowerSeries.X (R := A)) (↑h.unit⁻¹ : A)]
+    unfold PowerSeries.X
+    simp
+    by_cases hd1 : d = 1
+    simp [hd1]
+    rw [PowerSeries.coeff_subst', finsum_eq_single _ 1]
+    simp
+    intro m hm
+    -- to prove (PowerSeries.coeff A m) f • (PowerSeries.coeff A 1) (((PowerSeries.C A) ↑h.unit⁻¹ * PowerSeries.X) ^ m) = 0
+    have coeff_zero : (PowerSeries.coeff A 1) (((PowerSeries.C A) ↑h.unit⁻¹ * PowerSeries.X) ^ m) = 0 := by
+      rw [mul_pow, ←map_pow, PowerSeries.coeff_C_mul_X_pow, if_neg (Ne.symm hm)]
+    simp [coeff_zero]
+    -- substDomain
+    exact (substDomain_inv f h)
+    have dgetwo : ¬ d ≤ 1 := by
+      omega
+    rw [if_neg dgetwo, if_neg dgetwo]
+    unfold invFun_aux
+    simp
+    have aux : (PowerSeries.trunc' k) (-((PowerSeries.C A) ↑h.unit⁻¹ *
+      (PowerSeries.C A) ((PowerSeries.coeff A (k + 1)) (PowerSeries.subst (invFun_aux f h hc k).2 f)) *
+      PowerSeries.X ^ (k + 1))) = 0 := by
+      simp
+      unfold PowerSeries.trunc'
+      simp
+      ext d
+      by_cases hd : d ≤ k
+      have eq_aux : ((PowerSeries.C A) (↑h.unit⁻¹ : A) *
+              (PowerSeries.C A) ((PowerSeries.coeff A (k + 1)) (PowerSeries.subst (invFun_aux f h hc k).2 f)) *
+            PowerSeries.X ^ (k + 1)) = (PowerSeries.C A) ((↑h.unit⁻¹ : A) * ((PowerSeries.coeff A (k + 1)) (PowerSeries.subst (invFun_aux f h hc k).2 f))) * PowerSeries.X ^ (k + 1) := by
+        simp
+      rw [PowerSeries.coeff_truncFun', if_pos hd, eq_aux, PowerSeries.coeff_C_mul_X_pow, if_neg]
+      simp
+      linarith
+      rw [PowerSeries.coeff_truncFun', if_neg hd]
+      simp
+    rw [PowerSeries.trunc'_of_succ, PowerSeries.trunc'_of_subst k, map_add, aux, add_zero, ←PowerSeries.trunc'_of_subst k, ih]
+    have zero_aux : (Polynomial.monomial (k + 1))
+      ((PowerSeries.coeff A (k + 1))
+        (PowerSeries.subst
+          ((invFun_aux f h hc k).2 +
+            -((PowerSeries.C A) ↑h.unit⁻¹ *
+                  (PowerSeries.C A) ((PowerSeries.coeff A (k + 1)) (PowerSeries.subst (invFun_aux f h hc k).2 f)) *
+                PowerSeries.X ^ (k + 1)))
+          f)) = 0 := by
+      simp
+      have eq_aux : -((PowerSeries.C A) (↑h.unit⁻¹ : A) *
+              (PowerSeries.C A) ((PowerSeries.coeff A (k + 1)) (PowerSeries.subst (invFun_aux f h hc k).2 f)) *
+            PowerSeries.X ^ (k + 1)) = (PowerSeries.C A) (-(↑h.unit⁻¹ : A) * ((PowerSeries.coeff A (k + 1)) (PowerSeries.subst (invFun_aux f h hc k).2 f))) * PowerSeries.X ^ (k + 1) := by
+        simp
+      rw [eq_aux, subst_pow_add]
+      simp [←mul_assoc]
+      linarith
+      exact subst_inv_aux₂ f h hc
+    rw [zero_aux, add_zero, PowerSeries.trunc'_of_succ, PowerSeries.coeff_X, if_neg]
+    simp
+    simp [hk]
+    exact subst_inv_aux₂ f h hc
+    simp
+    exact subst_inv_aux₂ f h hc
 
 theorem subst_inv_aux {A : Type*} [CommRing A] (f : PowerSeries A)
   (h : IsUnit (PowerSeries.coeff A 1 f)) (hc : PowerSeries.constantCoeff A f = 0)
@@ -205,100 +517,12 @@ theorem subst_inv_aux {A : Type*} [CommRing A] (f : PowerSeries A)
     unfold PowerSeries.constantCoeff at zero_coeff
     simp [zero_coeff]
   constructor
-  · ext n
-    by_cases hn : n = 0
-    -- cases n = 0
-    · rw [hn]
-      simp
-      unfold PowerSeries.constantCoeff
-      rw [PowerSeries.constantCoeff_subst substDomain_g f]
-      conv =>
-        rhs
-        rw [←finsum_zero (α := ℕ)]
-      congr; funext d
-      by_cases hd : d = 0
-      · rw [hd]
-        simp [hc]
-      · simp
-        have zero_coeff : (PowerSeries.constantCoeff) A g = 0 := by
-          unfold g
-          unfold invFun_aux
-          simp
-        unfold PowerSeries.constantCoeff at zero_coeff
-        rw [zero_coeff, zero_pow hd]
-        simp
-    -- cases n = 1
-    · by_cases hn' : n = 1
-      rw [hn']
-      simp
-      unfold PowerSeries.coeff
-      rw [PowerSeries.coeff_subst substDomain_g f _]
-      calc
-        _ = (PowerSeries.coeff A 1) f • (coeff A (Finsupp.single () 1)) (g ^ 1) := by
-          apply finsum_eq_single
-          intro x hx
-          by_cases hx_zero : x = 0
-          · simp [hx_zero, hc]
-          · have hx_ge : x ≥ 2 := by omega
-            have eq_zero : PowerSeries.coeff A 1 (g ^ x) = 0 := by
-              rw [PowerSeries.coeff_pow]
-              have eq_aux : ∀ l ∈ (Finset.range x).finsuppAntidiag 1, ∃ i ∈ Finset.range x, (PowerSeries.coeff A (l i)) g = 0 := by
-                intro l hl
-                have i_zero : ∃ i ∈ Finset.range x, l i = 0 := by
-                  by_contra h'
-                  have i_contra : ∀ i ∈ Finset.range x, l i ≥ 1 := by
-                    intro i hi
-                    simp at h'
-                    simp at hi
-                    obtain hi' := h' i hi
-                    omega
-                  simp at hl
-                  obtain ⟨hl1, hl2⟩ := hl
-                  have ineq_aux : (Finset.range x).sum ⇑l ≥ x := by
-                    calc
-                      _ ≥ (Finset.range x).sum 1 := by
-                        apply Finset.sum_le_sum
-                        intro i hi
-                        exact (i_contra i hi)
-                      _ = x := by
-                        exact Finset.sum_range_induction 1 (fun x ↦ x) rfl (congrFun rfl) x
-                  linarith
-                obtain ⟨i, hi, hil⟩ := i_zero
-                use i
-                constructor
-                exact hi
-                simp [hil]
-                unfold g
-                unfold invFun_aux
-                simp
-              apply Finset.sum_eq_zero
-              intro l hl
-              obtain ⟨i, hi, hil⟩ := eq_aux l hl
-              exact (Finset.prod_eq_zero hi hil)
-            unfold PowerSeries.coeff at eq_zero
-            simp [eq_zero]
-        _ = 1 := by
-          have coeff_one : (PowerSeries.coeff A 1) g = h.unit⁻¹ := by
-            unfold g
-            unfold invFun_aux
-            simp
-          simp
-          unfold PowerSeries.coeff at coeff_one
-          rw [coeff_one]
-          simp
-      -- n ≥ 2
-      have hn_two : n ≥ 2 := by omega
-      have eq_zero : (PowerSeries.coeff A n) PowerSeries.X = 0 := by
-        rw [PowerSeries.coeff_X, if_neg]
-        omega
-      rw [eq_zero]
-
-
-      sorry
-
-
-
-
+  · apply PowerSeries.eq_of_forall_trunc'_eq
+    intro n
+    rw [PowerSeries.trunc'_of_subst, subst_inv_aux₀, subst_inv_aux₁]
+    unfold g
+    unfold invFun_aux
+    simp
   constructor
   · unfold g
     unfold invFun_aux
@@ -306,6 +530,8 @@ theorem subst_inv_aux {A : Type*} [CommRing A] (f : PowerSeries A)
   unfold g
   unfold invFun_aux
   simp
+
+
 
 -- prove the following theorem by inductively construct the coefficient
 theorem PowerSeries_subst_inv {A : Type*} [CommRing A] (f : PowerSeries A)
@@ -366,23 +592,22 @@ lemma subst_self {A : Type*} [CommRing A] (f : MvPowerSeries (Fin 2) A):
 
 
 -- need some theorem like associativity of substitution
-theorem subst_assoc {A : Type*} [CommRing A] {σ : Type*} (f g: PowerSeries  A) (h : MvPowerSeries σ A) :
+theorem subst_assoc {A : Type*} [CommRing A] {σ : Type*} (f g: PowerSeries  A)
+  (h : MvPowerSeries σ A) (hg : PowerSeries.SubstDomain g) (hh : PowerSeries.SubstDomain h) :
   PowerSeries.subst (PowerSeries.subst h g) f
     = PowerSeries.subst h (PowerSeries.subst g f) := by
   rw [←PowerSeries.subst_comp_subst]
   simp only [Function.comp_apply]
+  exact hg
+  exact hh
 
-  sorry
-
-  sorry
-
-lemma substDomain_aux {A : Type*} [CommRing A] {σ : Type*}  {g : PowerSeries A}
+lemma substDomain_aux {A : Type*} [CommRing A]   {g : PowerSeries A}
  (hb3 : (PowerSeries.constantCoeff A) g = 0) (G₁ : FormalGroup A)
-  : PowerSeries.SubstDomain (subst (sub_hom₂ g) G₁.toFun) :=
+  : PowerSeries.SubstDomain (subst (sub_hom g) G₁.toFun) :=
   {
     const_coeff := by
-      have eq_zero : ((constantCoeff (Fin 2) A) (subst (sub_hom₂ g) G₁.toFun)) = 0 := by
-        unfold sub_hom₂
+      have eq_zero : ((constantCoeff (Fin 2) A) (subst (sub_hom g) G₁.toFun)) = 0 := by
+        unfold sub_hom
         rw [constantCoeff_subst]
         simp
         have eq_zero_aux : ∀ (d : Fin 2 →₀ ℕ), (coeff A d) G₁.toFun *
@@ -490,13 +715,13 @@ lemma substDomain_aux {A : Type*} [CommRing A] {σ : Type*}  {g : PowerSeries A}
 
 lemma isIso_iff_substDomain_aux {A : Type*} [CommRing A] {g : PowerSeries A}
   (hb3 : (PowerSeries.constantCoeff A) g = 0)
-  : SubstDomain (sub_hom₂ g) := by
+  : SubstDomain (sub_hom g) := by
   apply substDomain_of_constantCoeff_nilpotent
   intro x
   by_cases hx : x = 0
   · rw [hx]
-    have zero_aux : ((constantCoeff (Fin 2) A) (sub_hom₂ g 0)) = 0 := by
-      unfold sub_hom₂
+    have zero_aux : ((constantCoeff (Fin 2) A) (sub_hom g 0)) = 0 := by
+      unfold sub_hom
       simp
       rw [PowerSeries.constantCoeff_subst]
       conv =>
@@ -510,8 +735,8 @@ lemma isIso_iff_substDomain_aux {A : Type*} [CommRing A] {g : PowerSeries A}
     simp [zero_aux]
   · have hx' : x = 1 := by omega
     rw [hx']
-    have zero_aux : ((constantCoeff (Fin 2) A) (sub_hom₂ g 1)) = 0 := by
-      unfold sub_hom₂
+    have zero_aux : ((constantCoeff (Fin 2) A) (sub_hom g 1)) = 0 := by
+      unfold sub_hom
       simp
       rw [PowerSeries.constantCoeff_subst]
       conv =>
@@ -557,17 +782,17 @@ lemma isIso_iff_substDomain_aux2 {A : Type*} [CommRing A]
 lemma isIso_iff_aux {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A}
   (α : FormalGroupHom G₁ G₂)  {g : PowerSeries A}
   (hb3 : (PowerSeries.constantCoeff A) g = 0):
-  MvPowerSeries.subst (sub_hom₂ (PowerSeries.subst g α.toFun)) G₂.toFun =
-  PowerSeries.subst (subst (sub_hom₂ g) G₁.toFun) α.toFun := by
+  MvPowerSeries.subst (sub_hom (PowerSeries.subst g α.toFun)) G₂.toFun =
+  PowerSeries.subst (subst (sub_hom g) G₁.toFun) α.toFun := by
   obtain h1 := α.hom
-  have eq_aux : subst (sub_hom₂ g) (PowerSeries.subst G₁.toFun α.toFun)
-    = subst (sub_hom₂ g) (subst (sub_hom₂ α.toFun) G₂.toFun) := by
+  have eq_aux : subst (sub_hom g) (PowerSeries.subst G₁.toFun α.toFun)
+    = subst (sub_hom g) (subst (sub_hom α.toFun) G₂.toFun) := by
     rw [h1]
   -- rw [←subst_comp_subst (b := (sub_hom₂ g))] at eq_aux
   unfold PowerSeries.subst
   -- α (F (β (X), β(Y)))
-  have eq_aux1 : subst (sub_hom₂ g) (PowerSeries.subst G₁.toFun α.toFun)
-    = (PowerSeries.subst (subst (sub_hom₂ g) G₁.toFun) α.toFun) := by
+  have eq_aux1 : subst (sub_hom g) (PowerSeries.subst G₁.toFun α.toFun)
+    = (PowerSeries.subst (subst (sub_hom g) G₁.toFun) α.toFun) := by
     unfold PowerSeries.subst
     rw [←subst_comp_subst]
     simp only [Function.comp_apply]
@@ -577,8 +802,8 @@ lemma isIso_iff_aux {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A}
     intro x
     by_cases hx : x = 0
     · rw [hx]
-      have zero_aux : ((constantCoeff (Fin 2) A) (sub_hom₂ g 0)) = 0 := by
-        unfold sub_hom₂
+      have zero_aux : ((constantCoeff (Fin 2) A) (sub_hom g 0)) = 0 := by
+        unfold sub_hom
         simp
         rw [PowerSeries.constantCoeff_subst]
         conv =>
@@ -592,8 +817,8 @@ lemma isIso_iff_aux {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A}
       simp [zero_aux]
     · have hx' : x = 1 := by omega
       rw [hx']
-      have zero_aux : ((constantCoeff (Fin 2) A) (sub_hom₂ g 1)) = 0 := by
-        unfold sub_hom₂
+      have zero_aux : ((constantCoeff (Fin 2) A) (sub_hom g 1)) = 0 := by
+        unfold sub_hom
         simp
         rw [PowerSeries.constantCoeff_subst]
         conv =>
@@ -605,13 +830,13 @@ lemma isIso_iff_aux {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A}
         apply PowerSeries.substDomain_of_constantCoeff_nilpotent
         simp
       simp [zero_aux]
-  have eq_aux2 : subst (sub_hom₂ g) (subst (sub_hom₂ α.toFun) G₂.toFun) =
-    subst (sub_hom₂ (PowerSeries.subst g α.toFun)) G₂.toFun := by
+  have eq_aux2 : subst (sub_hom g) (subst (sub_hom α.toFun) G₂.toFun) =
+    subst (sub_hom (PowerSeries.subst g α.toFun)) G₂.toFun := by
     rw [subst_comp_subst_apply]
     unfold PowerSeries.subst
-    have eq_aux' : (fun s ↦ subst (sub_hom₂ g) (sub_hom₂ α.toFun s)) =
-      (sub_hom₂ (subst (fun x ↦ g) α.toFun)) := by
-      unfold sub_hom₂
+    have eq_aux' : (fun s ↦ subst (sub_hom g) (sub_hom α.toFun s)) =
+      (sub_hom (subst (fun x ↦ g) α.toFun)) := by
+      unfold sub_hom
       funext x
       by_cases hx : x = 0
       simp [hx]
@@ -754,9 +979,9 @@ theorem isIso_iff_UnitCoeff {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A}
         simp
         -- G (X, Y) = G (α(β(X)), α(β(Y)))
         have eq_aux : G₂.toFun =
-          MvPowerSeries.subst (sub_hom₂ (PowerSeries.subst g α.toFun)) G₂.toFun := by
+          MvPowerSeries.subst (sub_hom (PowerSeries.subst g α.toFun)) G₂.toFun := by
           rw [hb2]
-          unfold sub_hom₂
+          unfold sub_hom
           rw [PowerSeries.subst_X, PowerSeries.subst_X]
           exact (subst_self G₂.toFun)
           refine PowerSeries.substDomain_of_constantCoeff_zero ?_
@@ -765,20 +990,23 @@ theorem isIso_iff_UnitCoeff {A : Type*} [CommRing A] {G₁ G₂ : FormalGroup A}
           simp
         -- G(α(g(X)), α(g(Y))) = α(F (β(X), β(Y)))
         have eq_aux' : G₂.toFun
-          = PowerSeries.subst (subst (sub_hom₂ g) G₁.toFun) α.toFun := by
+          = PowerSeries.subst (subst (sub_hom g) G₁.toFun) α.toFun := by
           rw [eq_aux]
           obtain h' := α.hom
           exact (isIso_iff_aux α hb3)
         rw [eq_aux']
         -- maybe need to change f here to satisfies some property that f ∈ PowerSeries.SubstDomain
-        have subst_aux : ∀ (f : MvPowerSeries (Fin 2) A), PowerSeries.SubstDomain f →  PowerSeries.subst (PowerSeries.subst f α.toFun) g = f := by
+        have subst_aux : ∀ (f : MvPowerSeries (Fin 2) A), PowerSeries.SubstDomain f →
+          PowerSeries.subst (PowerSeries.subst f α.toFun) g = f := by
           intro f hf
           rw [subst_assoc g α.toFun f, hb1, PowerSeries.subst_X]
           exact hf
-        refine (subst_aux (MvPowerSeries.subst (sub_hom₂ g) G₁.toFun) ?_)
+          exact SubstDomain_ZeroConst α.toPowerSeriesZeroConst
+          exact hf
+        refine (subst_aux (MvPowerSeries.subst (sub_hom g) G₁.toFun) ?_)
         -- need to prove SubstDomain namely, `PowerSeries.SubstDomain (subst (sub_hom₂ g) G₁.toFun)`
         -- make this to be a lemma
-        exact (substDomain_aux hb3 G₁ (σ := (Fin 2)))
+        exact (substDomain_aux hb3 G₁ )
     }
     use β
 
@@ -844,13 +1072,9 @@ noncomputable instance {A : Type*} [CommRing A] [UniformSpace A] : CommFormalGro
     simp only [Fin.isValue, MvPolynomial.coe_add, MvPolynomial.coe_X,
     MvPowerSeries.coeff_zero_eq_constantCoeff, map_add, MvPowerSeries.constantCoeff_X, add_zero]
   lin_coeff_X := by
-    simp only [Fin.isValue, map_add, coeff_index_single_self_X, add_right_eq_self]
-    rw [MvPowerSeries.coeff_index_single_X]
-    simp only [Fin.isValue, zero_ne_one, ↓reduceIte]
+    sorry
   lin_coeff_Y := by
-    simp only [Fin.isValue, map_add, coeff_index_single_self_X, add_right_eq_self]
-    rw [MvPowerSeries.coeff_index_single_X]
-    simp only [Fin.isValue, one_ne_zero, ↓reduceIte, zero_add]
+    sorry
   assoc := by
     rw [MvPowerSeries.subst_add SubstDomain_Add_aux₃, MvPowerSeries.subst_add SubstDomain_Add_aux₄,
       MvPowerSeries.subst_X SubstDomain_Add_aux₃, MvPowerSeries.subst_X SubstDomain_Add_aux₃,
@@ -895,25 +1119,9 @@ noncomputable instance MulFormalGroup {A : Type*} [CommRing A] : CommFormalGroup
     MvPolynomial.coe_mul, MvPowerSeries.coeff_zero_eq_constantCoeff, map_add,
     MvPowerSeries.constantCoeff_X, add_zero, map_mul, mul_zero]
   lin_coeff_X := by
-    rw [MvPolynomial.coeff_coe, MvPolynomial.coeff_add, MvPolynomial.coeff_add]
-    calc
-      _ = (1 : A) + (0 : A) + (0 : A) := by
-        rw [MvPolynomial.coeff_mul]
-        simp only [Fin.isValue, MvPolynomial.coeff_single_X, and_self, ↓reduceIte, one_ne_zero,
-          and_false, add_zero, Finsupp.antidiagonal_single, Finset.sum_map,
-          Function.Embedding.coe_prodMap, Function.Embedding.coeFn_mk, Prod.map_fst, and_true,
-          Prod.map_snd, mul_zero, Finset.sum_const_zero]
-      _ = (1 : A) := by norm_num
+    sorry
   lin_coeff_Y := by
-    rw [MvPolynomial.coeff_coe, MvPolynomial.coeff_add, MvPolynomial.coeff_add]
-    calc
-      _ = (0 : A) + (1 : A) + (0 : A) := by
-          rw [MvPolynomial.coeff_mul]
-          simp only [Fin.isValue, MvPolynomial.coeff_single_X, zero_ne_one, and_false, ↓reduceIte,
-            and_self, zero_add, Finsupp.antidiagonal_single, Finset.sum_map,
-            Function.Embedding.coe_prodMap, Function.Embedding.coeFn_mk, Prod.map_fst, Prod.map_snd,
-            and_true, mul_ite, mul_one, mul_zero, ite_self, Finset.sum_const_zero, add_zero]
-        _ = (1 : A) := by norm_num
+    sorry
   assoc := by
     let f : MvPolynomial (Fin 2) A := (MvPolynomial.X (0 : Fin 2) + MvPolynomial.X (1 : Fin 2) + MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (1 : Fin 2))
     have hf := Classical.epsilon_spec
